@@ -10,3 +10,4 @@ instantclient_21_10
 oracle_home/*
 app/wallet/*
 app/certs/*
+database/*

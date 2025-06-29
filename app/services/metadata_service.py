@@ -140,3 +140,16 @@ class MetadataService:
             print(f"Error cleaning old scheduler logs: {e}")
         finally:
             conn.close()
+
+    def clear_scheduler_logs_on_startup(self):
+        # Clears all entries from SCHEDULED_JOBS_LOG table. Used on application startup.
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM SCHEDULED_JOBS_LOG")
+            conn.commit()
+            print(f"Cleared SCHEDULED_JOBS_LOG table on startup. Deleted {cursor.rowcount} entries.")
+        except sqlite3.Error as e:
+            print(f"Error clearing scheduler logs on startup: {e}")
+        finally:
+            conn.close()

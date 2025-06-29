@@ -188,6 +188,10 @@ def start_scheduler():
     # Initializes and starts the APScheduler, scheduling reports based on Oracle configuration.
     logger.info("Starting report scheduler...")
     
+    # Clear scheduler logs on startup
+    metadata_service.clear_scheduler_logs_on_startup()
+    logger.info("Cleared SCHEDULED_JOBS_LOG on startup.")
+
     # Schedule the initial load and subsequent updates
     scheduler.add_job(
         update_scheduled_jobs,
