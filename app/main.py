@@ -1,0 +1,43 @@
+from fastapi import FastAPI
+from routers import extract_router, metadata_router
+from fastapi.middleware.cors import CORSMiddleware
+from middlewares.error_handler import ExceptionHandlerMiddleware, http_exception_handler
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+app = FastAPI()
+
+app.title = "App ETL And Analytics API for Oracle"
+app.version = "1.0.0"
+app.description = "ETL And Analytics API"
+app.docs_url = "/docs"
+
+origins = [
+    "https://testing.grupotsiperu.com.pe:8844",
+    "https://testing.grupotsiperu.com.pe:8843",
+    "https://web.grupotsiperu.com.pe:8445",
+    "https://web.grupotsiperu.com.pe:8843",
+    "http://localhost:4200",
+    "http://localhost:4600",
+    "http://localhost:4800",
+    "http://localhost:8000"
+]
+
+# Add middleware
+app.add_middleware(ExceptionHandlerMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
+
+# Exception Handler
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+
+app.include_router(extract_router.router, prefix="/api")
+app.include_router(metadata_router.router, prefix="/api")
+
+@app.get("/")
+def read_root():
+    return {"Hello": "World"}

@@ -1,0 +1,12 @@
+__# Python
+__pycache__
+venv
+.venv
+.env
+logs
+instantclient_21_10
+.vscode
+.idea
+oracle_home/*
+app/wallet/*
+app/certs/*

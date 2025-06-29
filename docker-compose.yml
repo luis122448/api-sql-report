@@ -1,0 +1,18 @@
+services:
+  app:
+    container_name: py-etl-oracle
+    env_file:
+      - ./.env
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DB_ORACLE_USER: ${DB_ORACLE_USER}
+      DB_ORACLE_PASSWORD: ${DB_ORACLE_PASSWORD}
+      DB_ORACLE_DSN: ${DB_ORACLE_DSN}
+    command: "python app/server.py"
+    ports:
+      - "8001:8001"
+    restart: always
+    volumes:
+      - /home/opc/keys/:/keys/
