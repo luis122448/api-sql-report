@@ -14,10 +14,10 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      LD_LIBRARY_PATH: /opt/oracle_home/instantclient
     command: "python app/server.py"
     ports:
       - "8001:8001"
     restart: always
     volumes:
       - /home/opc/keys/:/keys/
+      - /var/www/api-sql-reports/data-ingestor-python/database/:/opt/database

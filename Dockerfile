@@ -19,10 +19,9 @@ RUN apt-get update && \
 
 COPY ./app /opt/app/
 COPY ./oracle_home /opt/oracle_home/
-COPY ./backup /opt/backup/
 COPY ./install-instantclient.sh /opt/install-instantclient.sh
-
 RUN chmod +x /opt/install-instantclient.sh
+RUN mkdir -p /opt/database
 
 ENV LD_LIBRARY_PATH=/opt/oracle_home/instantclient
 

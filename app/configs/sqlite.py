@@ -1,12 +1,16 @@
+import os
 import sqlite3
 import logging
-
-DATABASE_FILE = "./db/metadata.db"
+from utils.path import BASEDIR
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+database_path = os.path.join(BASEDIR, "database","metadata.db")
 
 def get_db_connection():
-    conn = sqlite3.connect(DATABASE_FILE)
+    logger.info(f"Connecting to database at {database_path}")
+    conn = sqlite3.connect(database_path)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -24,11 +28,11 @@ def init_db():
                 id_report INTEGER NOT NULL,
                 name TEXT NOT NULL,
                 cadsql TEXT NOT NULL,
-                object_name TEXT, -- Made nullable
+                object_name TEXT, 
                 last_exec TIMESTAMP NOT NULL,
-                processing_time_ms INTEGER, -- Made nullable
-                status TEXT NOT NULL DEFAULT 'OK', -- New column: OK or FAILED
-                error_message TEXT, -- New column for error details
+                processing_time_ms INTEGER, 
+                status TEXT NOT NULL DEFAULT 'OK', 
+                error_message TEXT, 
                 PRIMARY KEY (id_cia, id_report, last_exec)
             )
         """)
