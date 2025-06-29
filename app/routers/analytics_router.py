@@ -4,12 +4,12 @@ from fastapi.encoders import jsonable_encoder
 from services.extract_service import ExtractService
 from services.metadata_service import MetadataService
 from typing import Dict, Any
-from auth.auth_handler import JWTBearer # Import JWTBearer
-from schemas.auth_schema import BasicAnalyticsSchema # Import BasicAnalyticsSchema
+from auth.auth_handler import JWTBearer
+from schemas.auth_schema import BasicAnalyticsSchema
 
 router = APIRouter(tags=["Analytics Reports"])
 
-@router.get("/reports/last/{id_report}", dependencies=[Depends(JWTBearer())]) # Removed id_cia from path
+@router.get("/reports/last/{id_report}", dependencies=[Depends(JWTBearer())])
 async def get_last_report(
     id_report: int,
     extract_service: ExtractService = Depends(),
@@ -19,7 +19,7 @@ async def get_last_report(
     # Retrieves the latest generated report for a given company and report ID.
     try:
         # Get metadata first to check for last_exec and object_name
-        metadata_entry = metadata_service.get_latest_report_metadata(token.id_cia, id_report) # Use token.id_cia
+        metadata_entry = metadata_service.get_latest_report_metadata(token.id_cia, id_report)
         if not metadata_entry:
             error_response = { "status": 1.1, "message": "No metadata found for the given id_cia and id_report.", "log_user": token.coduser }
             return JSONResponse(content=jsonable_encoder(error_response), status_code=status.HTTP_404_NOT_REQUEST)
@@ -43,7 +43,7 @@ async def get_last_report(
     except Exception as e:
         return JSONResponse(content={"status":1.2, "message":f"Endpoint error: {str(e)}", "log_user": token.coduser}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@router.get("/reports/specified/{file_name}", dependencies=[Depends(JWTBearer())]) # Removed id_cia from path
+@router.get("/reports/specified/{file_name}", dependencies=[Depends(JWTBearer())])
 async def get_specified_report(
     file_name: str,
     extract_service: ExtractService = Depends(),

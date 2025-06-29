@@ -21,8 +21,9 @@ if os.name == 'nt':
     oracledb.init_oracle_client(lib_dir=clientFilePathReal)
 else:
     # Linux
-    # instant_client_path = os.path.join(BASEDIR, "oracle_home", "instantclient")
-    oracledb.init_oracle_client(lib_dir="/var/www/api-sql-reports/data-ingestor-python/oracle_home/instantclient")
+    # Use BASEDIR to construct the path dynamically for both local and Docker environments
+    instant_client_path = os.path.join(BASEDIR, "oracle_home", "instantclient")
+    oracledb.init_oracle_client(lib_dir=instant_client_path)
 
 
 def get_oracle_connection():

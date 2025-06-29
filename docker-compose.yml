@@ -1,6 +1,6 @@
 services:
   app:
-    container_name: py-etl-oracle
+    container_name: data-ingestor-python
     env_file:
       - ./.env
     build: 
@@ -10,6 +10,11 @@ services:
       DB_ORACLE_USER: ${DB_ORACLE_USER}
       DB_ORACLE_PASSWORD: ${DB_ORACLE_PASSWORD}
       DB_ORACLE_DSN: ${DB_ORACLE_DSN}
+      MINIO_URL: ${MINIO_URL}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      LD_LIBRARY_PATH: /opt/oracle_home/instantclient
     command: "python app/server.py"
     ports:
       - "8001:8001"

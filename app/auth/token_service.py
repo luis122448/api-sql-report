@@ -1,6 +1,8 @@
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, Any
+import os # Import os
+from dotenv import load_dotenv # Import load_dotenv
 
 from jwt import encode, decode, ExpiredSignatureError, InvalidTokenError
 from schemas.auth_schema import BasicAuthSchema, BasicTokenSchema, BasicAnalyticsSchema
@@ -8,11 +10,13 @@ from schemas.auth_schema import BasicAuthSchema, BasicTokenSchema, BasicAnalytic
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Load environment variables
+load_dotenv()
 
 class TokenService:
 
     def __init__(self):
-        self.SECRET_KEY = '197b2c37c391bed93fe80344fe73b806947a65e36206e05a1a23c2fa12702fe3'
+        self.SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-super-secret-key") # Load from environment variable
         self.ALGORITHM = 'HS256'
         self.TOKEN_EXPIRATION_TIME = timedelta(days=30)  # 30 days
         pass

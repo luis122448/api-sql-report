@@ -3,6 +3,14 @@ LABEL luis122448 <luis122448@gmail.com>
 
 WORKDIR /opt
 
+ARG DB_ORACLE_USER
+ARG DB_ORACLE_PASSWORD
+ARG DB_ORACLE_DSN
+ARG MINIO_URL
+ARG MINIO_ACCESS_KEY
+ARG MINIO_SECRET_KEY
+ARG JWT_SECRET_KEY
+
 COPY ./requirements.txt /opt/requirements.txt
 RUN pip install --no-cache-dir --upgrade -r /opt/requirements.txt
 RUN apt-get update && \

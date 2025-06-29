@@ -47,7 +47,3 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     stop_scheduler()
-
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}

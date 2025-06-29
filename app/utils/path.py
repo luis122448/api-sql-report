@@ -5,7 +5,7 @@ import platform
 if platform.system() == "Windows":
     BASEAUX = os.path.dirname(os.path.realpath(__file__))
 else:
-    BASEAUX = os.environ.get("HOME") + os.path.dirname(os.path.realpath(__file__))
+    BASEAUX = os.path.dirname(os.path.realpath(__file__))
 
 BASEDIR = os.path.abspath(os.path.join(BASEAUX, os.pardir, os.pardir))
 

@@ -11,7 +11,7 @@ class ExtractionRequest(BaseModel):
     name: str
     query: str
 
-router = APIRouter()
+router = APIRouter(tags=["Pipeline Extraction"])
 
 @router.post("/extract", response_model=ApiResponseObject)
 def extract_data(
