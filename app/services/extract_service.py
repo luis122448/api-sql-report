@@ -21,50 +21,79 @@ class ExtractService:
         self.oracle_connection = oracle.connection
         self.oracle_cursor = oracle.connection.cursor()
 
-    def run_extraction_pipeline(self, id_cia: int, id_report: int, name: str, query: str) -> ApiResponseObject:
-        # Step 1: Decode the Oracle query
-        decode_response = ExtractService.decode_query(id_cia, query)
-        if decode_response.status != 1:
-            return decode_response
-        decoded_query = decode_response.object
-        
-        # Step 2: Retrieve data using the decoded query
-        data_response = self.get_data(decoded_query)
+    def run_extraction_pipeline(self, id_cia: int, id_report: int, name: str, query: str, company: str = None) -> ApiResponseObject:
+        start_pipeline_time = datetime.now()
+        pipeline_status = 'OK'
+        pipeline_error_message = None
+        object_name = None
+        last_exec = None
+        decoded_query = None
 
-        if data_response.status != 1:
-            return data_response
+        try:
+            # Step 1: Decode the Oracle query
+            decode_response = ExtractService.decode_query(id_cia, query)
+            if decode_response.status != 1:
+                pipeline_status = 'FAILED'
+                pipeline_error_message = decode_response.log_message
+                return decode_response # Early exit if decode fails
+            decoded_query = decode_response.object
+            
+            # Step 2: Retrieve data using the decoded query
+            data_response = self.get_data(decoded_query)
+            if data_response.status != 1:
+                pipeline_status = 'FAILED'
+                pipeline_error_message = data_response.log_message
+                last_exec = data_response.last_exec # Still log the time of attempt
+                return data_response # Early exit if data retrieval fails
+            last_exec = data_response.last_exec
 
-        # Step 3: If data retrieval was successful, convert to Parquet
-        file_path_response = self.to_parquet(data_response.list)
-        
-        if file_path_response.status != 1:
-            return file_path_response
+            # Step 3: If data retrieval was successful, convert to Parquet
+            file_path_response = self.to_parquet(data_response.list)
+            if file_path_response.status != 1:
+                pipeline_status = 'FAILED'
+                pipeline_error_message = file_path_response.log_message
+                return file_path_response # Early exit if parquet conversion fails
 
-        # Step 4: Upload the Parquet file to Minio
-        upload_response = self.upload_to_minio(file_path_response.object)
+            # Step 4: Upload the Parquet file to Minio
+            upload_response = self.upload_to_minio(file_path_response.object)
+            if upload_response.status != 1:
+                pipeline_status = 'FAILED'
+                pipeline_error_message = upload_response.log_message
+                return upload_response # Early exit if upload fails
+            object_name = upload_response.object["file_name"]
 
-        if upload_response.status != 1:
-            return upload_response
+        except Exception as e:
+            pipeline_status = 'FAILED'
+            pipeline_error_message = f"Unhandled exception during pipeline: {e}"
+            # No early exit here, proceed to log metadata
+        finally:
+            end_pipeline_time = datetime.now()
+            processing_time_ms = int((end_pipeline_time - start_pipeline_time).total_seconds() * 1000)
 
-        # Step 5: Log metadata to SQLite
-        metadata_response = self.metadata_service.log_report_metadata(
-            id_cia=id_cia,
-            id_report=id_report,
-            name=name,
-            cadsql=decoded_query,
-            object_name=upload_response.object["file_name"],
-            last_exec=data_response.last_exec
-        )
-
-        # If metadata logging fails, it's a critical error because the report ID might be reused incorrectly.
-        if metadata_response.status != 1:
-            return metadata_response
-
-        return upload_response
+            # Step 5: Log metadata to SQLite, regardless of success or failure
+            self.metadata_service.log_report_metadata(
+                id_cia=id_cia,
+                id_report=id_report,
+                name=name,
+                cadsql=decoded_query if decoded_query else query, # Log original query if decode failed
+                object_name=object_name,
+                last_exec=last_exec if last_exec else datetime.now(), # Log current time if no DB time obtained
+                processing_time_ms=processing_time_ms,
+                status=pipeline_status,
+                error_message=pipeline_error_message
+            )
+            # If the pipeline failed at an early stage, the initial return would have already happened.
+            # This final return ensures a consistent ApiResponseObject is always returned.
+            if pipeline_status == 'OK':
+                return ApiResponseObject(status=1, message="Pipeline completed successfully.", log_message="OK!")
+            else:
+                return ApiResponseObject(status=1.2, message="Pipeline failed.", log_message=pipeline_error_message)
 
     @staticmethod
     def decode_query(id_cia: int, query: str) -> ApiResponseObject:
         response = ApiResponseObject(status=1, message="OK!", log_message="Query decoded successfully.")
+
+        query = query.upper()
 
         # 1. Validate that PID_CIA placeholder exists
         if "PID_CIA" not in query:
@@ -75,13 +104,28 @@ class ExtractService:
 
         # Replace placeholders
         decoded_query = query.replace("PID_CIA", str(id_cia))
+        if ":P01INGSAL" in decoded_query:
+            ingsal = '-1'
+            decoded_query = decoded_query.replace(":P01INGSALDO", f"'{ingsal}'")
+        if ":P02MOTIVO" in decoded_query:
+            motivo = '-1'
+            decoded_query = decoded_query.replace(":P02MOTIVO", f"'{motivo}'")
         if ":P02PERIODO" in decoded_query:
             period_value = datetime.now().strftime('%Y')
-            decoded_query = decoded_query.replace(":P02PERIODO", f"'{period_value}'")
+            decoded_query = decoded_query.replace(":P01PERIODO", f"'{period_value}'")
+        if ":P02PERIODO_ANTERIOR" in decoded_query:
+            previous_period_value = (datetime.now() - pd.DateOffset(years=1)).strftime('%Y')
+            decoded_query = decoded_query.replace(":P01PERIODO_ANTERIOR", f"'{previous_period_value}'")
         if ":P02MES" in decoded_query:
             month_value = "-1"
-            decoded_query = decoded_query.replace(":P02MES", f"'{month_value}'")
-        if ":P04FECHA_DESDE" in decoded_query:
+            decoded_query = decoded_query.replace(":P01MES", f"'{month_value}'")
+        if ":P02MES_STOCK" in decoded_query:
+            month_stock_value = datetime.now().strftime('%m')
+            decoded_query = decoded_query.replace(":P01MES_STOCK", f"'{month_stock_value}'")
+        if ":P01MES_COSTO" in decoded_query:
+            month_costs_value = (datetime.now() - pd.DateOffset(months=1)).strftime('%m')
+            decoded_query = decoded_query.replace(":P01MES_COSTO", f"'{month_costs_value}'")
+        if ":P04FECH1A_DESDE" in decoded_query:
             start_date_value = (datetime.now() - pd.DateOffset(years=3)).strftime('%Y-%m-%d')
             decoded_query = decoded_query.replace(":P04FECHA_DESDE", f"'{start_date_value}'")
         if ":P04FECHA_HASTA" in decoded_query:
