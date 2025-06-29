@@ -8,12 +8,17 @@ from services.extract_service import ExtractService
 from services.minio_service import MinioService
 from services.metadata_service import MetadataService
 from scheduling.report_config_loader import ReportConfigLoader, Report
+from configs.minio import MinioConfig # Import MinioConfig
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 scheduler = BackgroundScheduler()
 metadata_service = MetadataService() # Instantiate MetadataService once
+
+# Instantiate MinioConfig and then MinioService
+minio_config_instance = MinioConfig()
+minio_service = MinioService(minio_config=minio_config_instance) # Pass the instance
 
 def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str, company: str):
     # Executes the extraction pipeline for a given report.
@@ -37,8 +42,7 @@ def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str,
         oracle_transaction = OracleTransaction()
         oracle_transaction.connection = oracle_connection # Set the connection manually
         
-        minio_service = MinioService()
-        
+        # Use the already instantiated minio_service and metadata_service
         extract_service = ExtractService(
             oracle=oracle_transaction, 
             minio_service=minio_service, 
@@ -193,6 +197,26 @@ def start_scheduler():
         replace_existing=True
     )
     logger.info("Scheduled job to update report configurations every 60 minutes.")
+
+    # Schedule daily cleanup for scheduler logs
+    scheduler.add_job(
+        metadata_service.clean_old_scheduler_logs,
+        CronTrigger(hour=4, minute=0), # Run daily at 4 AM
+        id='clean_scheduler_logs',
+        name='Clean Old Scheduler Logs',
+        replace_existing=True
+    )
+    logger.info("Scheduled daily cleanup for old scheduler logs at 04:00 AM.")
+
+    # Schedule daily cleanup for Minio objects
+    scheduler.add_job(
+        minio_service.clean_old_minio_objects,
+        CronTrigger(hour=5, minute=0), # Run daily at 5 AM
+        id='clean_minio_objects',
+        name='Clean Old Minio Objects',
+        replace_existing=True
+    )
+    logger.info("Scheduled daily cleanup for old Minio objects at 05:00 AM.")
 
     # Run the initial update immediately
     update_scheduled_jobs()

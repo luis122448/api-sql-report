@@ -225,42 +225,4 @@ class ExtractService:
                 os.remove(file_path)
             return object_response
 
-    def read_parquet_data(self, id_cia: int, file_name: str) -> tuple[bytes | None, dict | None]:
-        try:
-            # 1. Verify metadata exists
-            metadata_entry = self.metadata_service.get_report_metadata(id_cia, file_name)
-            if not metadata_entry:
-                return None, {"status": 1.1, "message": "Metadata not found for the given id_cia and file_name.", "log_user": "system", "status_code": 404}
-
-            # 2. Download from Minio
-            bucket_name = "reports"
-            parquet_data = self.minio_service.download_file(bucket_name, file_name)
-
-            if not parquet_data:
-                return None, {"status": 1.2, "message": "Parquet file not found in Minio or could not be downloaded.", "log_user": "system", "status_code": 404}
-
-            return parquet_data, None
-
-        except Exception as e:
-            return None, {"status": 1.2, "message": f"Error reading Parquet data: {str(e)}", "log_user": "system", "status_code": 500}
-
-    def read_latest_parquet_data(self, id_cia: int, id_report: int) -> tuple[bytes | None, dict | None]:
-        try:
-            # 1. Verify metadata exists
-            metadata_entry = self.metadata_service.get_latest_report_metadata(id_cia, id_report)
-            if not metadata_entry:
-                return None, {"status": 1.1, "message": "No metadata found for the given id_cia and id_report.", "log_user": "system", "status_code": 404}
-
-            file_name = metadata_entry["object_name"]
-
-            # 2. Download from Minio
-            bucket_name = "reports"
-            parquet_data = self.minio_service.download_file(bucket_name, file_name)
-
-            if not parquet_data:
-                return None, {"status": 1.2, "message": "Parquet file not found in Minio or could not be downloaded.", "log_user": "system", "status_code": 404}
-
-            return parquet_data, None
-
-        except Exception as e:
-            return None, {"status": 1.2, "message": f"Error reading latest Parquet data: {str(e)}", "log_user": "system", "status_code": 500}
+    # Removed read_parquet_data and read_latest_parquet_data from here

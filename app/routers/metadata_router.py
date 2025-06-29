@@ -1,38 +1,20 @@
 from fastapi import APIRouter, Depends, Response, status
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-from services.extract_service import ExtractService
+from services.metadata_service import MetadataService
+from typing import List, Dict, Any
+from schemas.api_response_schema import ApiResponseList # Import ApiResponseList
 
-router = APIRouter()
+router = APIRouter(tags=["Metadata & Dashboard"])
 
-@router.get("/read_parquet/{id_cia}/{file_name}", tags=["ANALYTICS"])
-def read_parquet(id_cia: int, file_name: str, extract_service: ExtractService = Depends()):
-    try:
-        parquet_data, error_details = extract_service.read_parquet_data(id_cia, file_name)
+@router.get("/dashboard/total_scheduled_reports", response_model=ApiResponseList)
+async def get_total_scheduled_reports(metadata_service: MetadataService = Depends()):
+    # Returns a list of all currently scheduled reports with their configuration details.
+    reports = metadata_service.get_total_scheduled_reports_metadata()
+    return ApiResponseList(status=1, message="OK", list=reports)
 
-        if error_details:
-            return JSONResponse(content=jsonable_encoder(error_details), status_code=error_details.get("status_code", status.HTTP_400_BAD_REQUEST))
-        
-        if not parquet_data:
-            error_response = { "status": 1.1, "message": "No data found or Parquet generation failed.", "log_user": "system", "status_code": status.HTTP_404_NOT_FOUND }
-            return JSONResponse(content=jsonable_encoder(error_response), status_code=status.HTTP_404_NOT_FOUND)
-
-        return Response(content=parquet_data, media_type="application/vnd.apache.parquet")
-    except Exception as e:
-        return JSONResponse(content={"status":1.2, "message":f"Endpoint error: {str(e)}", "log_user": "system"}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@router.get("/read_latest_parquet/{id_cia}/{id_report}", tags=["ANALYTICS"])
-def read_latest_parquet(id_cia: int, id_report: int, extract_service: ExtractService = Depends()):
-    try:
-        parquet_data, error_details = extract_service.read_latest_parquet_data(id_cia, id_report)
-
-        if error_details:
-            return JSONResponse(content=jsonable_encoder(error_details), status_code=error_details.get("status_code", status.HTTP_400_BAD_REQUEST))
-        
-        if not parquet_data:
-            error_response = { "status": 1.1, "message": "No data found or Parquet generation failed.", "log_user": "system", "status_code": status.HTTP_404_NOT_FOUND }
-            return JSONResponse(content=jsonable_encoder(error_response), status_code=status.HTTP_404_NOT_FOUND)
-
-        return Response(content=parquet_data, media_type="application/vnd.apache.parquet")
-    except Exception as e:
-        return JSONResponse(content={"status":1.2, "message":f"Endpoint error: {str(e)}", "log_user": "system"}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+@router.get("/dashboard/weekly_execution_details", response_model=ApiResponseList)
+async def get_weekly_report_execution_details(metadata_service: MetadataService = Depends()):
+    # Returns a list of all report executions in the last week with their status and details.
+    executions = metadata_service.get_weekly_report_execution_details_metadata()
+    return ApiResponseList(status=1, message="OK", list=executions)

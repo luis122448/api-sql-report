@@ -1,7 +1,9 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from configs.sqlite import get_db_connection
 from schemas.api_response_schema import ApiResponseObject
+from scheduling.report_config_loader import ReportConfigLoader # Import the loader
+from typing import Any # Import Any
 
 class MetadataService:
     def log_report_metadata(self, id_cia: int, id_report: int, name: str, cadsql: str, 
@@ -95,5 +97,46 @@ class MetadataService:
             conn.commit()
         except sqlite3.Error as e:
             print(f"Error logging scheduler event: {e}")
+        finally:
+            conn.close()
+
+    def get_total_scheduled_reports_metadata(self) -> list[dict[str, Any]]: # Changed List[Dict[str, Any]] to list[dict[str, Any]]
+        # Returns a list of all currently scheduled reports with their configuration details.
+        # This data comes from the Oracle configuration, not the execution log.
+        reports = ReportConfigLoader.get_reports_from_oracle()
+        return [report.dict() for report in reports]
+
+    def get_weekly_report_execution_details_metadata(self) -> list[dict[str, Any]]: # Changed List[Dict[str, Any]] to list[dict[str, Any]]
+        # Returns a list of all report executions in the last week with their status and details.
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            one_week_ago = datetime.now() - timedelta(weeks=1)
+            cursor.execute("""
+                SELECT job_id, report_id_cia, report_id_report, report_name, report_company, 
+                       event_type, timestamp, message, next_run_time, duration_ms, status
+                FROM SCHEDULED_JOBS_LOG
+                WHERE timestamp >= ?
+                ORDER BY timestamp DESC
+            """, (one_week_ago,))
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+        except sqlite3.Error as e:
+            print(f"Error retrieving weekly execution details: {e}")
+            return []
+        finally:
+            conn.close()
+
+    def clean_old_scheduler_logs(self):
+        # Deletes scheduler logs older than one week.
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            one_week_ago = datetime.now() - timedelta(weeks=1)
+            cursor.execute("DELETE FROM SCHEDULED_JOBS_LOG WHERE timestamp < ?", (one_week_ago,))
+            conn.commit()
+            print(f"Cleaned old scheduler logs. Deleted {cursor.rowcount} entries.")
+        except sqlite3.Error as e:
+            print(f"Error cleaning old scheduler logs: {e}")
         finally:
             conn.close()

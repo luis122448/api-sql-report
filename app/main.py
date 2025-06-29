@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routers import extract_router, metadata_router, scheduler_router
+from routers import extract_router, metadata_router, analytics_router
 from fastapi.middleware.cors import CORSMiddleware
 from middlewares.error_handler import ExceptionHandlerMiddleware, http_exception_handler
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -38,7 +38,7 @@ app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 
 app.include_router(extract_router.router, prefix="/api")
 app.include_router(metadata_router.router, prefix="/api")
-app.include_router(scheduler_router.router, prefix="/api")
+app.include_router(analytics_router.router, prefix="/api")
 
 @app.on_event("startup")
 async def startup_event():
