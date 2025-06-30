@@ -1,66 +1,121 @@
-# Repository Setup and Access
+# Data Ingestor Python Application
 
-This document outlines the steps required to set up and access the `py-etl-oracle` repository.
+This README provides instructions for deploying the Data Ingestor Python application using both Docker Compose for local development and Kubernetes for production environments.
 
----
-## Prerequisites
+## Deployment with Docker Compose
 
-* An SSH key pair is required for secure access to the Bitbucket repository and the remote server.
-* Git must be installed on your local machine.
-* An SSH client is needed for connecting to the remote server.
-* For Oracle connectivity, the Oracle Instant Client libraries will be required on the remote server.
+For local development and testing, you can use Docker Compose to run the application.
 
----
-## Repository Access
+### 1. Environment Variables Setup
 
-### Clone the Repository
+Create a `.env` file in the root directory of the project. This file will contain the environment variables required by the application. Replace the placeholder values with your actual credentials and configurations.
 
-```bash
-GIT_SSH_COMMAND="ssh -i ~/.ssh/id_lcalvo" git clone git@bitbucket.org:grupotsi/py-etl-oracle.git
+```
+DB_ORACLE_USER=your_oracle_user
+DB_ORACLE_PASSWORD=your_oracle_password
+DB_ORACLE_DSN=your_oracle_dsn
+MINIO_URL=your_minio_url
+MINIO_ACCESS_KEY=your_minio_access_key
+MINIO_SECRET_KEY=your_minio_secret_key
+JWT_SECRET_KEY=your_jwt_secret_key
 ```
 
-### Pull Lastest Changes
+### 2. Running the Application with Docker Compose
+
+The `compileDocker.sh` script automates the process of pulling the latest code, building the Docker image, and starting the services using Docker Compose.
+
+To deploy the application using Docker Compose, execute the following command:
 
 ```bash
-GIT_SSH_COMMAND="ssh -i ~/.ssh/id_lcalvo" git pull origin master
+./compileDocker.sh
 ```
 
-### Push Local Changes
+This script will:
+- Pull the latest changes from your Git repository.
+- Build the Docker image for the `app` service defined in `docker-compose.yml`.
+- Recreate and start the `app` service in detached mode (`-d`).
+- The application will be accessible on port `8001` on your host machine, as it uses `network_mode: "host"`.
+
+## Deployment with Kubernetes
+
+For production deployments, the application can be deployed to a Kubernetes cluster. This setup includes an OpenVPN sidecar container to connect to an Oracle database via VPN.
+
+### 1. Build and Push Docker Image
+
+First, you need to build the Docker image and push it to Docker Hub (or your preferred container registry). Ensure you are logged in to Docker Hub (`docker login`).
+
+The `build-release.sh` script handles the multi-architecture build and push process:
 
 ```bash
-GIT_SSH_COMMAND="ssh -i ~/.ssh/id_lcalvo" git push origin master
+./build-release.sh
 ```
 
----
-## Remote Server Access and Setup for Deployment
+This script will:
+- Build the `luis122448/data-ingestor-python:v1.0.0` image for `linux/amd64` and `linux/arm64` platforms.
+- Push the built image to Docker Hub.
 
-### Verify IP Address ON Remote Server
+### 2. Kubernetes Manifests Deployment
+
+The Kubernetes manifests are located in the `kubernetes/` directory. They must be applied in a specific order to ensure all dependencies are met.
+
+#### a. Create OpenVPN Secrets
+
+The `client.ovpn` and `credentials.txt` files are used to establish the VPN connection. These need to be stored as Kubernetes secrets.
 
 ```bash
-cat /home/luis122448/Desktop/repository-tsi/keys/putty/leer.txt
+kubectl create secret generic openvpn-client-config --from-file=./vpn/client.ovpn -n api-sql-reports
+kubectl create secret generic openvpn-credentials --from-file=./vpn/credentials.txt -n api-sql-reports
 ```
 
-### Connect to the Remote Server
+#### b. Deploy Persistent Volume Claim (PVC)
+
+The `pvc.yaml` defines the PersistentVolumeClaim for the SQLite database.
 
 ```bash
-ssh -i /home/luis122448/Desktop/repository-tsi/keys/putty/private_service opc@150.136.40.237
+kubectl apply -f ./kubernetes/pvc.yaml -n api-sql-reports
 ```
 
-### Copy Oracle Instant Client Libraries to Remote Server
+#### c. Deploy Application Deployment
+
+The `deployment.yaml` defines the main application deployment, including the `data-ingestor-python` container and the `openvpn-client` initContainer. The initContainer ensures the VPN connection is established before the main application starts.
 
 ```bash
-scp -i /home/luis122448/Desktop/repository-tsi/keys/putty/private_service \
-./oracle_home/instantclient-basic-linux.x64-23.8.0.25.04.zip \
-./oracle_home/instantclient-sqlplus-linux.x64-23.8.0.25.04.zip \
-./oracle_home/instantclient-tools-linux.x64-23.8.0.25.04.zip \
-opc@150.136.40.237:/home/opc/py-etl-oracle/oracle_home
+kubectl apply -f ./kubernetes/deployment.yaml -n api-sql-reports
 ```
 
-### Post-Connection Setup on Remote Server
+#### d. Deploy Service
+
+The `service.yml` defines the Kubernetes Service that exposes the application within the cluster.
 
 ```bash
-sudo su
-export PATH=/home/opc/.local/bin:/home/opc/bin:/usr/share/Modules/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin
-ssh-agent /bin/bash
-ssh-add /etc/ssh/id_repo
+kubectl apply -f ./kubernetes/service.yml -n api-sql-reports
+```
+
+#### e. Deploy Ingress (Optional, for external access)
+
+The `ingress.yml` defines the Ingress resource for external access to the application, typically configured with a domain and TLS.
+
+```bash
+kubectl apply -f ./kubernetes/ingress.yml -n api-sql-reports
+```
+
+### 3. Verifying Deployment
+
+You can check the status of your pods and services using the following commands:
+
+- Check pod status:
+```bash
+kubectl get pods -n api-sql-reports -l app=data-ingestor-python
+```
+- Describe a pod to see events and detailed status (replace `<pod-name>` with an actual pod name):
+```bash
+kubectl describe pod <pod-name> -n api-sql-reports
+```
+- View logs for the OpenVPN initContainer (replace `<pod-name>` with an actual pod name):
+```bash
+kubectl logs <pod-name> -n api-sql-reports -c openvpn-client
+```
+- View logs for the main application container (replace `<pod-name>` with an actual pod name):
+```bash
+kubectl logs <pod-name> -n api-sql-reports -c data-ingestor-python
 ```

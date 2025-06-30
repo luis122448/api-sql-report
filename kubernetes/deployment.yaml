@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-ingestor-python
+  namespace: api-sql-reports
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: data-ingestor-python
+  template:
+    metadata:
+      labels:
+        app: data-ingestor-python
+    spec:
+      containers:
+        - name: data-ingestor-python
+          image: luis122448/data-ingestor-python:v1.0.0
+          env:
+            - name: LD_LIBRARY_PATH
+              value: /opt/oracle_home/instantclient
+            - name: DB_ORACLE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: database-secrets
+                  key: DB_ORACLE_USER
+            - name: DB_ORACLE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-secrets
+                  key: DB_ORACLE_PASSWORD
+            - name: DB_ORACLE_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: database-secrets
+                  key: DB_ORACLE_DSN
+            - name: MINIO_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-secrets
+                  key: MINIO_URL
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: database-secrets
+                  key: MINIO_ACCESS_KEY
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: database-secrets
+                  key: MINIO_SECRET_KEY
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: database-secrets
+                  key: JWT_SECRET_KEY
+          command: ["python", "app/server.py"]
+          ports:
+            - containerPort: 8001
+          volumeMounts:
+            - name: database-volume
+              mountPath: /opt/database
+      volumes:
+        - name: database-volume
+          persistentVolumeClaim:
+            claimName: sqllite-pvc
+        - name: openvpn-config
+          secret:
+            secretName: openvpn-client-config
+        - name: openvpn-credentials
+          secret:
+            secretName: openvpn-credentials
+      initContainers:
+        - name: openvpn-client
+          image: ghcr.io/wfg/openvpn-client:latest
+          env:
+            - name: VPN_CONFIG_FILE
+              value: /tmp/client.ovpn
+            - name: VPN_CREDENTIALS_FILE
+              value: /tmp/credentials.txt
+          volumeMounts:
+            - name: openvpn-config
+              mountPath: /etc/openvpn/config
+              readOnly: true
+            - name: openvpn-credentials
+              mountPath: /etc/openvpn/credentials
+              readOnly: true
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              cp /etc/openvpn/config/client.ovpn /tmp/client.ovpn
+              cp /etc/openvpn/credentials/credentials.txt /tmp/credentials.txt
+              openvpn --config /tmp/client.ovpn --auth-user-pass /tmp/credentials.txt --daemon
+              sleep 10 # Give OpenVPN some time to establish connection
+      restartPolicy: Always

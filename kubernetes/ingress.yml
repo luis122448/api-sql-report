@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: data-ingestor-python-ingress
+  namespace: api-sql-reports
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  labels:
+    app.kubernetes.io/name: api-sql-reports
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/part-of: api-sql-reports-luis122448-com-suite
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: api-sql-reports.luis122448.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: data-ingestor-python-service
+              port:
+                number: 8001
+  tls:
+    - hosts:
+      - api-sql-reports.luis122448.com
+      secretName: data-ingestor-python-tls

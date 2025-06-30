@@ -21,3 +21,4 @@ services:
     volumes:
       - /home/opc/keys/:/keys/
       - /var/www/api-sql-reports/data-ingestor-python/database/:/opt/database
+    network_mode: "host"

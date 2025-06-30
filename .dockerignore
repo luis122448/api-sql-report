@@ -1,6 +1,8 @@
 .idea/
 .venv/
 database/
-instantclient_21_11/
+instantclient/
 .gitignore
 __pycache__
+vpn/
+app/certs/*

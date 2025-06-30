@@ -11,3 +11,5 @@ oracle_home/*
 app/wallet/*
 app/certs/*
 database/*
+secret.yaml
+vpn/*

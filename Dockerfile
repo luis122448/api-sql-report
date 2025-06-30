@@ -1,15 +1,7 @@
 FROM python:3.11.12-slim
-LABEL luis122448 <luis122448@gmail.com>
+LABEL maintainer="luis122448"
 
 WORKDIR /opt
-
-ARG DB_ORACLE_USER
-ARG DB_ORACLE_PASSWORD
-ARG DB_ORACLE_DSN
-ARG MINIO_URL
-ARG MINIO_ACCESS_KEY
-ARG MINIO_SECRET_KEY
-ARG JWT_SECRET_KEY
 
 COPY ./requirements.txt /opt/requirements.txt
 RUN pip install --no-cache-dir --upgrade -r /opt/requirements.txt
@@ -23,9 +15,8 @@ COPY ./install-instantclient.sh /opt/install-instantclient.sh
 RUN chmod +x /opt/install-instantclient.sh
 RUN mkdir -p /opt/database
 
-ENV LD_LIBRARY_PATH=/opt/oracle_home/instantclient
-
 RUN /bin/bash -c "/opt/install-instantclient.sh"
+RUN ls -l /opt/oracle_home/instantclient
 
 RUN apt-get update && apt-get install -y libaio1
 

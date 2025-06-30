@@ -1,7 +1,27 @@
 #!/bin/bash
-unzip -n ./oracle_home/instantclient-basic-linux.x64-23.8.0.25.04.zip -d /opt/oracle_home
-unzip -n ./oracle_home/instantclient-sqlplus-linux.x64-23.8.0.25.04.zip -d /opt/oracle_home
-unzip -n ./oracle_home/instantclient-tools-linux.x64-23.8.0.25.04.zip -d /opt/oracle_home
+ARCH=$(uname -m)
+VERSION="23.8.0.25.04" # Define version for easier updates
+
+if [ "$ARCH" = "x86_64" ]; then
+    BASIC_ZIP="instantclient-basic-linux.x64-${VERSION}.zip"
+    SQLPLUS_ZIP="instantclient-sqlplus-linux.x64-${VERSION}.zip"
+    TOOLS_ZIP="instantclient-tools-linux.x64-${VERSION}.zip"
+elif [ "$ARCH" = "aarch64" ]; then
+    BASIC_ZIP="instantclient-basic-linux.arm64-${VERSION}.zip"
+    SQLPLUS_ZIP="instantclient-sqlplus-linux.arm64-${VERSION}.zip"
+    TOOLS_ZIP="" # No tools zip for arm64 based on the directory listing
+else
+    echo "Unsupported architecture: $ARCH"
+    exit 1
+fi
+
+unzip -n "./oracle_home/$BASIC_ZIP" -d /opt/oracle_home
+unzip -n "./oracle_home/$SQLPLUS_ZIP" -d /opt/oracle_home
+
+if [ -n "$TOOLS_ZIP" ]; then
+    unzip -n "./oracle_home/$TOOLS_ZIP" -d /opt/oracle_home
+fi
+
 mv ./oracle_home/instantclient_23_8 /opt/oracle_home/instantclient
 cp ./app/wallet/sqlnet.ora /opt/oracle_home/instantclient/network/admin
 cp ./app/wallet/tnsnames.ora /opt/oracle_home/instantclient/network/admin
