@@ -19,6 +19,8 @@ spec:
           env:
             - name: LD_LIBRARY_PATH
               value: /opt/oracle_home/instantclient
+            - name: ORACLE_HOME
+              value: /opt/oracle_home/instantclient
             - name: DB_ORACLE_USER
               valueFrom:
                 secretKeyRef:
