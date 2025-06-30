@@ -1,6 +1,14 @@
 #!/bin/bash
-ARCH=$(uname -m)
+ARCH=${TARGETARCH:-$(uname -m)}
 VERSION="23.8.0.25.04" # Define version for easier updates
+
+echo "Detected architecture: $ARCH"
+
+if [ "$ARCH" = "amd64" ]; then
+    ARCH="x86_64"
+elif [ "$ARCH" = "arm64" ]; then
+    ARCH="aarch64"
+fi
 
 if [ "$ARCH" = "x86_64" ]; then
     BASIC_ZIP="instantclient-basic-linux.x64-${VERSION}.zip"
