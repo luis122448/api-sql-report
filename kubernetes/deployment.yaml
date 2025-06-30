@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: data-ingestor-python
-          image: luis122448/data-ingestor-python:v1.0.1
+          image: luis122448/data-ingestor-python:v1.0.2
           env:
             - name: LD_LIBRARY_PATH
               value: /opt/oracle_home/instantclient
