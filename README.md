@@ -125,10 +125,22 @@ kubectl logs <pod-name> -n api-sql-reports -c data-ingestor-python
 ```bash
 scp -i /home/luis122448/Desktop/repository-tsi/keys/putty/private_service \
 ./oracle_home/instantclient-basic-linux.x64-23.8.0.25.04.zip \
-./oracle_home/instantclient-sqlplus-linux.x64-23.8.0.25.04.zip \
-./oracle_home/instantclient-tools-linux.x64-23.8.0.25.04.zip \
 ./oracle_home/instantclient-basic-linux.arm64-23.8.0.25.04.zip \
+./oracle_home/instantclient-sqlplus-linux.x64-23.8.0.25.04.zip \
+./oracle_home/instantclient-sqlplus-linux.arm64-23.8.0.25.04.zip
+./oracle_home/instantclient-tools-linux.x64-23.8.0.25.04.zip \
+./oracle_home/instantclient-tools-linux.arm64-23.8.0.25.04.zip \
+./oracle_home/instantclient-sdk-linux.x64-23.8.0.25.04.zip \
 ./oracle_home/instantclient-sdk-linux.arm64-23.8.0.25.04.zip \
-./oracle_home/instantclient-sdk-linux.arm64-23.8.0.25.04.zip
 luis122448@192.168.100.141:/var/www/api-sql-reports/data-ingestor-python
+```
+
+### Copy Oracle Instant Client Libraries to Remote Server
+
+```bash
+scp -i /home/luis122448/Desktop/repository-tsi/keys/putty/private_service \
+./app/wallet/sqlnet.ora \
+./app/wallet/tnsnames.ora \
+./app/wallet/cwallet.sso \
+luis122448@192.168.100.141:/var/www/api-sql-reports/data-ingestor-python/app/wallet/
 ```
