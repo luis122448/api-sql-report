@@ -6,10 +6,12 @@ if [ "$ARCH" = "x86_64" ]; then
     BASIC_ZIP="instantclient-basic-linux.x64-${VERSION}.zip"
     SQLPLUS_ZIP="instantclient-sqlplus-linux.x64-${VERSION}.zip"
     TOOLS_ZIP="instantclient-tools-linux.x64-${VERSION}.zip"
+    SDK_ZIP="" # No SDK zip for x64 based on the directory listing
 elif [ "$ARCH" = "aarch64" ]; then
     BASIC_ZIP="instantclient-basic-linux.arm64-${VERSION}.zip"
     SQLPLUS_ZIP="instantclient-sqlplus-linux.arm64-${VERSION}.zip"
     TOOLS_ZIP="" # No tools zip for arm64 based on the directory listing
+    SDK_ZIP="instantclient-sdk-linux.arm64-${VERSION}.zip"
 else
     echo "Unsupported architecture: $ARCH"
     exit 1
@@ -20,6 +22,10 @@ unzip -n "./oracle_home/$SQLPLUS_ZIP" -d /opt/oracle_home
 
 if [ -n "$TOOLS_ZIP" ]; then
     unzip -n "./oracle_home/$TOOLS_ZIP" -d /opt/oracle_home
+fi
+
+if [ -n "$SDK_ZIP" ]; then
+    unzip -n "./oracle_home/$SDK_ZIP" -d /opt/oracle_home
 fi
 
 mv ./oracle_home/instantclient_23_8 /opt/oracle_home/instantclient
