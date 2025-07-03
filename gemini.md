@@ -1,6 +1,4 @@
-Puedes decirma porque cuando despliego con docker compose con el comando sudo docker compose up --build --force-recreate --no-deps -d
-
-no tengo ningun problema con la libreria instantclient
+Puedes decirma porque cuando despliego con docker compose ( en Orange pi ) con el comando sudo docker compose up --build --force-recreate --no-deps -d no tengo ningun problema con la libreria instantclient
 
 ```Dockerfile
 FROM python:3.11.12-slim
@@ -38,39 +36,39 @@ mis logs...
 luis122448@orange-001:/var/www/api-sql-reports/data-ingestor-python$ sudo docker-compose up --build --force-recreate --no-deps -d
 [sudo] password for luis122448: 
 WARN[0000] Docker Compose is configured to build using Bake, but buildx isn't installed 
-[+] Building 11.5s (19/19) FINISHED                                                                              docker:default
- => [app internal] load build definition from Dockerfile                                                                   0.0s
- => => transferring dockerfile: 812B                                                                                       0.0s
- => [app internal] load metadata for docker.io/library/python:3.11.12-slim                                                11.1s
- => [app internal] load .dockerignore                                                                                      0.0s
- => => transferring context: 118B                                                                                          0.0s
- => [app  1/13] FROM docker.io/library/python:3.11.12-slim@sha256:dbf1de478a55d6763afaa39c2f3d7b54b25230614980276de5cacdd  0.0s
- => [app internal] load build context                                                                                      0.1s
- => => transferring context: 2.48kB                                                                                        0.0s
- => CACHED [app  2/13] WORKDIR /opt                                                                                        0.0s
- => CACHED [app  3/13] COPY ./requirements.txt /opt/requirements.txt                                                       0.0s
- => CACHED [app  4/13] RUN pip install --no-cache-dir --upgrade -r /opt/requirements.txt                                   0.0s
- => CACHED [app  5/13] RUN apt-get update &&     apt-get install -y --no-install-recommends unzip &&     rm -rf /var/lib/  0.0s
- => CACHED [app  6/13] COPY ./app /opt/app/                                                                                0.0s
- => CACHED [app  7/13] COPY ./oracle_home /opt/oracle_home/                                                                0.0s
- => CACHED [app  8/13] COPY ./install-instantclient.sh /opt/install-instantclient.sh                                       0.0s
- => CACHED [app  9/13] RUN chmod +x /opt/install-instantclient.sh                                                          0.0s
- => CACHED [app 10/13] RUN mkdir -p /opt/database                                                                          0.0s
- => CACHED [app 11/13] RUN /bin/bash -c "/opt/install-instantclient.sh"                                                    0.0s
- => CACHED [app 12/13] RUN ls -l /opt/oracle_home/instantclient                                                            0.0s
- => CACHED [app 13/13] RUN apt-get update && apt-get install -y libaio1                                                    0.0s
- => [app] exporting to image                                                                                               0.0s
- => => exporting layers                                                                                                    0.0s
- => => writing image sha256:1e73cfe87bb30d119d6e2b022998eab13b9e4f5ccc36aba825cab3c35271aa5c                               0.0s
- => => naming to docker.io/library/data-ingestor-python-app                                                                0.0s
- => [app] resolving provenance for metadata file                                                                           0.0s
+[+] Building 11.5s (19/19) FINISHED                                                                                                                             docker:default
+ => [app internal] load build definition from Dockerfile                                                                                                                  0.1s
+ => => transferring dockerfile: 812B                                                                                                                                      0.0s
+ => [app internal] load metadata for docker.io/library/python:3.11.12-slim                                                                                               11.0s
+ => [app internal] load .dockerignore                                                                                                                                     0.0s
+ => => transferring context: 118B                                                                                                                                         0.0s
+ => [app  1/13] FROM docker.io/library/python:3.11.12-slim@sha256:dbf1de478a55d6763afaa39c2f3d7b54b25230614980276de5cacdde79529d0c                                        0.0s
+ => [app internal] load build context                                                                                                                                     0.1s
+ => => transferring context: 2.48kB                                                                                                                                       0.0s
+ => CACHED [app  2/13] WORKDIR /opt                                                                                                                                       0.0s
+ => CACHED [app  3/13] COPY ./requirements.txt /opt/requirements.txt                                                                                                      0.0s
+ => CACHED [app  4/13] RUN pip install --no-cache-dir --upgrade -r /opt/requirements.txt                                                                                  0.0s
+ => CACHED [app  5/13] RUN apt-get update &&     apt-get install -y --no-install-recommends unzip &&     rm -rf /var/lib/apt/lists/*                                      0.0s
+ => CACHED [app  6/13] COPY ./app /opt/app/                                                                                                                               0.0s
+ => CACHED [app  7/13] COPY ./oracle_home /opt/oracle_home/                                                                                                               0.0s
+ => CACHED [app  8/13] COPY ./install-instantclient.sh /opt/install-instantclient.sh                                                                                      0.0s
+ => CACHED [app  9/13] RUN chmod +x /opt/install-instantclient.sh                                                                                                         0.0s
+ => CACHED [app 10/13] RUN mkdir -p /opt/database                                                                                                                         0.0s
+ => CACHED [app 11/13] RUN /bin/bash -c "/opt/install-instantclient.sh"                                                                                                   0.0s
+ => CACHED [app 12/13] RUN ls -l /opt/oracle_home/instantclient                                                                                                           0.0s
+ => CACHED [app 13/13] RUN apt-get update && apt-get install -y libaio1                                                                                                   0.0s
+ => [app] exporting to image                                                                                                                                              0.0s
+ => => exporting layers                                                                                                                                                   0.0s
+ => => writing image sha256:c400c2556156b0a54ca34a567ae6ba4a946b9b3a4bb60ae64a5648b4edd2b911                                                                              0.0s
+ => => naming to docker.io/library/data-ingestor-python-app                                                                                                               0.0s
+ => [app] resolving provenance for metadata file                                                                                                                          0.0s
 [+] Running 2/2
- ! app Published ports are discarded when using host network mode                                                          0.1s 
- ✔ Container data-ingestor-python                                 Started                                                  1.1s 
+ ! app Published ports are discarded when using host network mode                                                                                                         0.1s 
+ ✔ Container data-ingestor-python                                 Started                                                                                                 0.9s 
 luis122448@orange-001:/var/www/api-sql-reports/data-ingestor-python$ sudo docker ps
 CONTAINER ID   IMAGE                      COMMAND                  CREATED          STATUS          PORTS     NAMES
-08aa73eff742   data-ingestor-python-app   "python app/server.py"   14 seconds ago   Up 14 seconds             data-ingestor-python
-luis122448@orange-001:/var/www/api-sql-reports/data-ingestor-python$ sudo docker logs 08aa73eff742
+52910d69d0a5   data-ingestor-python-app   "python app/server.py"   36 seconds ago   Up 34 seconds             data-ingestor-python
+luis122448@orange-001:/var/www/api-sql-reports/data-ingestor-python$ sudo docker logs 52910d69d0a5
 INFO:     Will watch for changes in these directories: ['/opt']
 INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
 INFO:     Started reloader process [1] using StatReload
@@ -87,10 +85,11 @@ INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly schedul
 INFO:scheduling.scheduler:Scheduled daily cleanup for old scheduler logs at 04:00 AM.
 INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
 INFO:scheduling.scheduler:Scheduled daily cleanup for old Minio objects at 05:00 AM.
-INFO:scheduling.scheduler:Updating scheduled jobs from Oracle configuration
+INFO:scheduling.scheduler:Updating scheduled jobs from Oracle configuration...
+luis122448@orange-001:/var/www/api-sql-reports/data-ingestor-python$ 
 ```
 
-pero cuando lo despliego en kubernetes con el deployment
+pero cuando lo despliego en kubernetes con este deployment
 
 ```yaml
 apiVersion: apps/v1
@@ -108,6 +107,8 @@ spec:
       labels:
         app: data-ingestor-python
     spec:
+      nodeSelector:
+        kubernetes.io/arch: arm64
       containers:
         - name: data-ingestor-python
           image: luis122448/data-ingestor-python:v1.0.2
@@ -258,9 +259,108 @@ Help: https://python-oracledb.readthedocs.io/en/latest/user_guide/troubleshootin
 (.venv) luis122448@dev-003:/var/www/api-sql-reports/data-ingestor-python$ 
 ```
 
-Esto se esta deplegando en un arquitectura ARM64, pero justamente el Docker Compose que te comente al inciio se realiza sibre en orangepi, a si de igual forma deberia funcionar.., ademas el script install-instantclient.sh, captura ambas logicas de arquitectura
+Esto se esta deplegando en un arquitectura ARM64, pero justamente el Docker Compose que te comente al incio se realiza sibre en orangepi, a si de igual forma deberia funcionar.., ademas el script install-instantclient.sh, captura ambas logicas de arquitectura
 
 ```install-instantclient.sh
+#!/bin/bash
+ARCH=${TARGETARCH:-$(uname -m)}
+VERSION="23.8.0.25.04" # Define version for easier updates
+
+echo "Detected architecture: $ARCH"
+
+if [ "$ARCH" = "amd64" ]; then
+    ARCH="x86_64"
+elif [ "$ARCH" = "arm64" ]; then
+    ARCH="aarch64"
+fi
+
+if [ "$ARCH" = "x86_64" ]; then
+    BASIC_ZIP="instantclient-basic-linux.x64-${VERSION}.zip"
+    SQLPLUS_ZIP="instantclient-sqlplus-linux.x64-${VERSION}.zip"
+    TOOLS_ZIP="instantclient-tools-linux.x64-${VERSION}.zip"
+    SDK_ZIP="instantclient-sdk-linux.x64-${VERSION}.zip"
+elif [ "$ARCH" = "aarch64" ]; then
+    BASIC_ZIP="instantclient-basic-linux.arm64-${VERSION}.zip"
+    SQLPLUS_ZIP="instantclient-sqlplus-linux.arm64-${VERSION}.zip"
+    TOOLS_ZIP="instantclient-tools-linux.arm64-${VERSION}.zip"
+    SDK_ZIP="instantclient-sdk-linux.arm64-${VERSION}.zip"
+else
+    echo "Unsupported architecture: $ARCH"
+    exit 1
+fi
+
+unzip -n "./oracle_home/$BASIC_ZIP" -d /opt/oracle_home
+unzip -n "./oracle_home/$SQLPLUS_ZIP" -d /opt/oracle_home
+unzip -n "./oracle_home/$TOOLS_ZIP" -d /opt/oracle_home
+unzip -n "./oracle_home/$SDK_ZIP" -d /opt/oracle_home
+
+mv ./oracle_home/instantclient_23_8 /opt/oracle_home/instantclient
+cp ./app/wallet/sqlnet.ora /opt/oracle_home/instantclient/network/admin
+cp ./app/wallet/tnsnames.ora /opt/oracle_home/instantclient/network/admin
+cp ./app/wallet/cwallet.sso /opt/oracle_home/instantclient/network/admin
+
+# Only for debugging purposes
+export DPI_DEBUG_LEVEL=64
+```
+
+pero no entiendo, porque cuando se compila y des hacer pull esa imagen en arm64, se instala las librerias x86-64, osea de amd64, en ves de arm64 como lo muestra este log
+
+```log
+(.venv) luis122448@dev-003:/var/www/api-sql-reports/data-ingestor-python$ kubectl exec -it data-ingestor-python-74547f545f-vxbp4 -n api-sql-reports -- /bin/bash
+Defaulted container "data-ingestor-python" out of: data-ingestor-python, openvpn-client (init)
+root@data-ingestor-python-74547f545f-vxbp4:/opt# ldd /opt/oracle_home/instantclient/libclntsh.so.23.1
+        not a dynamic executable
+root@data-ingestor-python-74547f545f-vxbp4:/opt# apt-get install -y file
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following additional packages will be installed:
+  libmagic-mgc libmagic1
+The following NEW packages will be installed:
+  file libmagic-mgc libmagic1
+0 upgraded, 3 newly installed, 0 to remove and 3 not upgraded.
+Need to get 446 kB of archives.
+After this operation, 8709 kB of additional disk space will be used.
+Get:1 http://deb.debian.org/debian bookworm/main arm64 libmagic-mgc arm64 1:5.44-3 [305 kB]
+Get:2 http://deb.debian.org/debian bookworm/main arm64 libmagic1 arm64 1:5.44-3 [98.5 kB]
+Get:3 http://deb.debian.org/debian bookworm/main arm64 file arm64 1:5.44-3 [42.5 kB]
+Fetched 446 kB in 0s (3578 kB/s)
+debconf: delaying package configuration, since apt-utils is not installed
+Selecting previously unselected package libmagic-mgc.
+(Reading database ... 6704 files and directories currently installed.)
+Preparing to unpack .../libmagic-mgc_1%3a5.44-3_arm64.deb ...
+Unpacking libmagic-mgc (1:5.44-3) ...
+Selecting previously unselected package libmagic1:arm64.
+Preparing to unpack .../libmagic1_1%3a5.44-3_arm64.deb ...
+Unpacking libmagic1:arm64 (1:5.44-3) ...
+Selecting previously unselected package file.
+Preparing to unpack .../file_1%3a5.44-3_arm64.deb ...
+Unpacking file (1:5.44-3) ...
+Setting up libmagic-mgc (1:5.44-3) ...
+Setting up libmagic1:arm64 (1:5.44-3) ...
+Setting up file (1:5.44-3) ...
+Processing triggers for libc-bin (2.36-9+deb12u10) ...
+root@data-ingestor-python-74547f545f-vxbp4:/opt# file /opt/oracle_home/instantclient/libclntsh.so
+/opt/oracle_home/instantclient/libclntsh.so: symbolic link to libclntsh.so.23.1
+root@data-ingestor-python-74547f545f-vxbp4:/opt# file /opt/oracle_home/instantclient/libnnz.so
+/opt/oracle_home/instantclient/libnnz.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, BuildID[sha1]=759b3954eef6dfa1afaad4c8002bcaecb51df88e, not stripped
+root@data-ingestor-python-74547f545f-vxbp4:/opt# 
+```
+
+mira, cuando lo desplegue en docker as salia, cuando lo despliego con docker compose, a si es como debe salir
+
+```log
+Processing triggers for libc-bin (2.36-9+deb12u10) ...
+root@orange-001:/opt# file /opt/oracle_home/instantclient/libclntsh.so
+/opt/oracle_home/instantclient/libclntsh.so: symbolic link to libclntsh.so.23.1
+root@orange-001:/opt# file /opt/oracle_home/instantclient/libnnz.so
+/opt/oracle_home/instantclient/libnnz.so: ELF 64-bit LSB shared object, ARM aarch64, version 1 (SYSV), dynamically linked, BuildID[sha1]=073b4b410c676e726f88406ee9cc8b0f03968823, not stripped
+root@orange-001:/opt# 
+```
+
+las imagenes se contruyen con este script para ambar arquitecturas
+
+```bash
 #!/bin/bash
 # Description: Build and deploy application Docker image to Docker Hub.
 
@@ -299,5 +399,3 @@ docker buildx build \
 
 echo "Image ${FULL_IMAGE_NAME} successfully deployed to Docker Hub!"
 ```
-
-no entiendo porque sigue sin ejecutarse en kubernmetes si ya funciona en amd64 y arm64

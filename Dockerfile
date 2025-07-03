@@ -14,14 +14,16 @@ COPY ./oracle_home /opt/oracle_home/
 COPY ./install-instantclient.sh /opt/install-instantclient.sh
 RUN chmod +x /opt/install-instantclient.sh
 RUN mkdir -p /opt/database
-
-RUN /bin/bash -c "/opt/install-instantclient.sh"
-RUN ls -l /opt/oracle_home/instantclient
-
 RUN apt-get update && apt-get install -y libaio1
 
 ENV LD_LIBRARY_PATH=/opt/oracle_home/instantclient
 ENV ORACLE_HOME=/opt/oracle_home/instantclient
 
+# RUN /bin/bash -c "/opt/install-instantclient.sh"
+# RUN ls -l /opt/oracle_home/instantclient
+
+COPY ./entrypoint.sh /opt/entrypoint.sh
+RUN chmod +x /opt/entrypoint.sh
+
 EXPOSE 8001
-CMD [ "python", "app/server.py" ]
+CMD ["/opt/entrypoint.sh"]

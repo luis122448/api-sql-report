@@ -13,9 +13,11 @@ spec:
       labels:
         app: data-ingestor-python
     spec:
+      nodeSelector:
+        kubernetes.io/arch: arm64
       containers:
         - name: data-ingestor-python
-          image: luis122448/data-ingestor-python:v1.0.2
+          image: luis122448/data-ingestor-python:v1.0.3
           env:
             - name: LD_LIBRARY_PATH
               value: /opt/oracle_home/instantclient
@@ -56,7 +58,7 @@ spec:
                 secretKeyRef:
                   name: database-secrets
                   key: JWT_SECRET_KEY
-          command: ["python", "app/server.py"]
+          command: ["cmd", "/opt/entrypoint.sh"]
           ports:
             - containerPort: 8001
           volumeMounts:
