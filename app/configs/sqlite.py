@@ -62,6 +62,27 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_report_ids ON SCHEDULED_JOBS_LOG (report_id_cia, report_id_report)
         """)
 
+        # Create API_USAGE_LOG table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS API_USAGE_LOG (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TIMESTAMP NOT NULL,
+                id_cia INTEGER NOT NULL,
+                id_report INTEGER,
+                requester_ip TEXT NOT NULL,
+                endpoint TEXT NOT NULL,
+                user_agent TEXT,
+                token_coduser TEXT,
+                processing_time_ms INTEGER
+            )
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_usage_cia_report ON API_USAGE_LOG (id_cia, id_report)
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_usage_timestamp ON API_USAGE_LOG (timestamp)
+        """)
+
         conn.commit()
         conn.close()
         logging.info("Database initialized successfully. Table METADATA_REPORT and SCHEDULED_JOBS_LOG are ready.")

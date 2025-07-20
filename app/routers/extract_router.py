@@ -18,7 +18,7 @@ class ExtractionRequest(BaseModel):
 router = APIRouter(tags=["Pipeline Extraction"])
 
 @router.post("/extract", response_model=ApiResponseObject)
-@limiter.limit("1/minute")
+@limiter.limit("4/minute")
 def extract_data(
     request: Request, # Add request: Request
     extraction_request: ExtractionRequest, # Rename request to extraction_request
