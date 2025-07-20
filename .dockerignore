@@ -1,7 +1,7 @@
 .idea/
 .venv/
 database/
-instantclient/
+oracle_home/instantclient/
 .gitignore
 __pycache__
 vpn/

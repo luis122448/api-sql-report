@@ -10,8 +10,8 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 COPY ./app /opt/app/
-COPY ./oracle_home /opt/oracle_home/
-COPY ./install-instantclient.sh /opt/install-instantclient.sh
+COPY ./oracle_home/*.zip /opt/oracle_home/
+COPY ./oracle_home/build-install-instantclient.sh /opt/install-instantclient.sh
 RUN chmod +x /opt/install-instantclient.sh
 RUN mkdir -p /opt/database
 RUN apt-get update && apt-get install -y libaio1

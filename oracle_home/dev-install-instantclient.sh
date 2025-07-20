@@ -25,15 +25,21 @@ else
     exit 1
 fi
 
-unzip -n "./oracle_home/$BASIC_ZIP" -d /opt/oracle_home
-unzip -n "./oracle_home/$SQLPLUS_ZIP" -d /opt/oracle_home
-unzip -n "./oracle_home/$TOOLS_ZIP" -d /opt/oracle_home
-unzip -n "./oracle_home/$SDK_ZIP" -d /opt/oracle_home
+unzip -n "./oracle_home/$BASIC_ZIP" -d ./oracle_home/
+unzip -n "./oracle_home/$SQLPLUS_ZIP" -d ./oracle_home/
+unzip -n "./oracle_home/$TOOLS_ZIP" -d ./oracle_home/
+unzip -n "./oracle_home/$SDK_ZIP" -d ./oracle_home/
 
-mv ./oracle_home/instantclient_23_8 /opt/oracle_home/instantclient
-cp ./app/wallet/sqlnet.ora /opt/oracle_home/instantclient/network/admin
-cp ./app/wallet/tnsnames.ora /opt/oracle_home/instantclient/network/admin
-cp ./app/wallet/cwallet.sso /opt/oracle_home/instantclient/network/admin
+rm -rf ./oracle_home/instantclient/*
+mkdir -p ./oracle_home/instantclient/
+
+mv ./oracle_home/instantclient_23_8/* ./oracle_home/instantclient/
+cp ./app/keys/sqlnet.ora ./oracle_home/instantclient/network/admin
+cp ./app/keys/tnsnames.ora ./oracle_home/instantclient/network/admin
+cp ./app/keys/cwallet.sso ./oracle_home/instantclient/network/admin
+
+rm -rf ./oracle_home/instantclient_23_8
+rm -rf ./oracle_home/META-INF
 
 # Only for debugging purposes
 export DPI_DEBUG_LEVEL=64

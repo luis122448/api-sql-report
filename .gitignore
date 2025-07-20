@@ -8,7 +8,10 @@ instantclient_21_10
 .vscode
 .idea
 oracle_home/*
+!oracle_home/*.sh
 app/wallet/*
+app/keys/*
+!app/keys/README.md
 app/certs/*
 database/*
 secret.yaml
