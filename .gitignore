@@ -14,5 +14,6 @@ app/keys/*
 !app/keys/README.md
 app/certs/*
 database/*
+!database/README.md
 secret.yaml
 vpn/*
