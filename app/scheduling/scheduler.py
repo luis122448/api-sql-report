@@ -25,31 +25,32 @@ def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str,
     # This function is called by the scheduler.
     job_id = f"report_{id_cia}_{id_report}"
     start_time = datetime.now()
-    
+    logger.info(f"SCHEDULER: Starting job {job_id} for report '{name}'.")
+
     metadata_service.log_scheduler_event(
         job_id=job_id, 
         report_id_cia=id_cia, 
         report_id_report=id_report, 
         report_name=name, 
-        report_company=company, # Pass company here
+        report_company=company,
         event_type='job_started',
         message=f"Starting extraction for Report ID: {id_report}"
     )
-    logger.info(f"Starting scheduled extraction for Report ID: {id_report}, Name: {name}")
+    
     try:
-        # Manually instantiate dependencies for ExtractService
+        logger.info(f"SCHEDULER: Instantiating dependencies for job {job_id}.")
         oracle_connection = get_oracle_connection()
         oracle_transaction = OracleTransaction()
-        oracle_transaction.connection = oracle_connection # Set the connection manually
+        oracle_transaction.connection = oracle_connection
         
-        # Use the already instantiated minio_service and metadata_service
         extract_service = ExtractService(
             oracle=oracle_transaction, 
             minio_service=minio_service, 
             metadata_service=metadata_service
         )
         
-        result = extract_service.run_extraction_pipeline(id_cia, id_report, name, query, company) # Pass company to pipeline
+        logger.info(f"SCHEDULER: Running extraction pipeline for job {job_id}.")
+        result = extract_service.run_extraction_pipeline(id_cia, id_report, name, query, company)
         
         end_time = datetime.now()
         duration_ms = int((end_time - start_time).total_seconds() * 1000)
@@ -60,26 +61,27 @@ def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str,
                 report_id_cia=id_cia, 
                 report_id_report=id_report, 
                 report_name=name, 
-                report_company=company, # Pass company here
+                report_company=company,
                 event_type='job_completed',
                 message=f"Extraction for Report ID: {id_report} completed successfully.",
                 duration_ms=duration_ms,
                 status='success'
             )
-            logger.info(f"Scheduled extraction for Report ID: {id_report} completed successfully.")
+            logger.info(f"SCHEDULER: Job {job_id} completed successfully.")
         else:
             metadata_service.log_scheduler_event(
                 job_id=job_id, 
                 report_id_cia=id_cia, 
                 report_id_report=id_report, 
                 report_name=name, 
-                report_company=company, # Pass company here
+                report_company=company,
                 event_type='job_failed',
                 message=f"Extraction for Report ID: {id_report} failed: {result.log_message}",
                 duration_ms=duration_ms,
                 status='failed'
             )
-            logger.error(f"Scheduled extraction for Report ID: {id_report} failed: {result.log_message}")
+            logger.error(f"SCHEDULER: Job {job_id} failed during pipeline execution: {result.log_message}")
+
     except Exception as e:
         end_time = datetime.now()
         duration_ms = int((end_time - start_time).total_seconds() * 1000)
@@ -88,16 +90,18 @@ def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str,
             report_id_cia=id_cia, 
             report_id_report=id_report, 
             report_name=name, 
-            report_company=company, # Pass company here
+            report_company=company,
             event_type='job_failed',
             message=f"Unhandled error during scheduled extraction for Report ID: {id_report}: {e}",
             duration_ms=duration_ms,
             status='failed'
         )
-        logger.error(f"Unhandled error during scheduled extraction for Report ID: {id_report}: {e}")
+        logger.error(f"SCHEDULER: Unhandled exception in job {job_id}. Error: {e}", exc_info=True)
+
     finally:
         if 'oracle_connection' in locals() and oracle_connection:
             oracle_connection.close()
+        logger.info(f"SCHEDULER: Finished job {job_id}.")
 
 def update_scheduled_jobs():
     # Updates the scheduler's jobs based on the latest configuration from Oracle.
@@ -191,6 +195,14 @@ def start_scheduler():
     # Clear scheduler logs on startup
     metadata_service.clear_scheduler_logs_on_startup()
     logger.info("Cleared SCHEDULED_JOBS_LOG on startup.")
+
+    # Initial sequential execution of all reports
+    logger.info("Starting initial sequential execution of all reports...")
+    all_reports = ReportConfigLoader.get_reports_from_oracle()
+    for report in all_reports:
+        logger.info(f"Initial execution for report: {report.name}")
+        run_scheduled_extraction(report.id_cia, report.id_report, report.name, report.query, report.company)
+    logger.info("Initial sequential execution of all reports finished.")
 
     # Schedule the initial load and subsequent updates
     scheduler.add_job(

@@ -96,14 +96,13 @@ class ExtractService:
         query = query.upper()
 
         # 1. Validate that PID_CIA placeholder exists
-        if "PID_CIA" not in query:
+        if "_PID_CIA" not in query:
             response.status = 1.2
             response.message = "ERROR!"
-            response.log_message = "Validation Error: The query must contain the 'PID_CIA' placeholder."
+            response.log_message = "Validation Error: The query must contain the '_PID_CIA' placeholder."
             return response
-
         # Replace placeholders
-        decoded_query = query.replace("PID_CIA", str(id_cia))
+        decoded_query = query.replace("_PID_CIA", str(id_cia))
         if ":P01INGSAL" in decoded_query:
             ingsal = '-1'
             decoded_query = decoded_query.replace(":P01INGSALDO", f"'{ingsal}'")
@@ -112,20 +111,20 @@ class ExtractService:
             decoded_query = decoded_query.replace(":P02MOTIVO", f"'{motivo}'")
         if ":P02PERIODO" in decoded_query:
             period_value = datetime.now().strftime('%Y')
-            decoded_query = decoded_query.replace(":P01PERIODO", f"'{period_value}'")
+            decoded_query = decoded_query.replace(":P02PERIODO", f"'{period_value}'")
         if ":P02PERIODO_ANTERIOR" in decoded_query:
             previous_period_value = (datetime.now() - pd.DateOffset(years=1)).strftime('%Y')
-            decoded_query = decoded_query.replace(":P01PERIODO_ANTERIOR", f"'{previous_period_value}'")
+            decoded_query = decoded_query.replace(":P02PERIODO_ANTERIOR", f"'{previous_period_value}'")
         if ":P02MES" in decoded_query:
             month_value = "-1"
-            decoded_query = decoded_query.replace(":P01MES", f"'{month_value}'")
+            decoded_query = decoded_query.replace(":P02MES", f"'{month_value}'")
         if ":P02MES_STOCK" in decoded_query:
             month_stock_value = datetime.now().strftime('%m')
-            decoded_query = decoded_query.replace(":P01MES_STOCK", f"'{month_stock_value}'")
-        if ":P01MES_COSTO" in decoded_query:
+            decoded_query = decoded_query.replace(":P02MES_STOCK", f"'{month_stock_value}'")
+        if ":P02MES_COSTO" in decoded_query:
             month_costs_value = (datetime.now() - pd.DateOffset(months=1)).strftime('%m')
-            decoded_query = decoded_query.replace(":P01MES_COSTO", f"'{month_costs_value}'")
-        if ":P04FECH1A_DESDE" in decoded_query:
+            decoded_query = decoded_query.replace(":P02MES_COSTO", f"'{month_costs_value}'")
+        if ":P04FECHA_DESDE" in decoded_query:
             start_date_value = (datetime.now() - pd.DateOffset(years=3)).strftime('%Y-%m-%d')
             decoded_query = decoded_query.replace(":P04FECHA_DESDE", f"'{start_date_value}'")
         if ":P04FECHA_HASTA" in decoded_query:

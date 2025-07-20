@@ -22,7 +22,7 @@ async def get_last_report(
         metadata_entry = metadata_service.get_latest_report_metadata(token.id_cia, id_report)
         if not metadata_entry:
             error_response = { "status": 1.1, "message": "No metadata found for the given id_cia and id_report.", "log_user": token.coduser }
-            return JSONResponse(content=jsonable_encoder(error_response), status_code=status.HTTP_404_NOT_REQUEST)
+            return JSONResponse(content=jsonable_encoder(error_response), status_code=status.HTTP_404_NOT_FOUND)
 
         file_name = metadata_entry["object_name"]
         last_etl_exec = metadata_entry["last_exec"]

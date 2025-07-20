@@ -13,6 +13,7 @@ services:
       MINIO_URL: ${MINIO_URL}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      API_LOGIN_ANALYTICS: ${API_LOGIN_ANALYTICS}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
     command: "python app/server.py"
     ports:
