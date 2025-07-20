@@ -138,10 +138,10 @@ class ExtractService:
             decoded_query = decoded_query.replace(":P06MES_COSTO", f"'{month_costs_value}'")
         if ":P04FECHA_DESDE" in decoded_query:
             start_date_value = (datetime.now() - pd.DateOffset(years=3)).strftime('%Y-%m-%d')
-            decoded_query = decoded_query.replace(":P04FECHA_DESDE", f"'{start_date_value}'")
+            decoded_query = decoded_query.replace(":P04FECHA_DESDE", f"TO_DATE('{start_date_value}', 'YYYY-MM-DD')")
         if ":P04FECHA_HASTA" in decoded_query:
             end_date_value = datetime.now().strftime('%Y-%m-%d')
-            decoded_query = decoded_query.replace(":P04FECHA_HASTA", f"'{end_date_value}'")
+            decoded_query = decoded_query.replace(":P04FECHA_HASTA", f"TO_DATE('{end_date_value}', 'YYYY-MM-DD')")
 
         # 2. Validate that no placeholders are left undecoded
         remaining_placeholders = re.findall(r'(\{\{.*?\}\}|\:\w+)', decoded_query)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Response, status, Request
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from services.extract_service import ExtractService
@@ -6,11 +6,17 @@ from services.metadata_service import MetadataService
 from typing import Dict, Any
 from auth.auth_handler import JWTBearer
 from schemas.auth_schema import BasicAnalyticsSchema
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(tags=["Analytics Reports"])
 
 @router.get("/reports/last/{id_report}", dependencies=[Depends(JWTBearer())])
+@limiter.limit("1/minute")
 async def get_last_report(
+    request: Request, # Add request: Request
     id_report: int,
     extract_service: ExtractService = Depends(),
     metadata_service: MetadataService = Depends(),
@@ -44,7 +50,9 @@ async def get_last_report(
         return JSONResponse(content={"status":1.2, "message":f"Endpoint error: {str(e)}", "log_user": token.coduser}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @router.get("/reports/specified/{file_name}", dependencies=[Depends(JWTBearer())])
+@limiter.limit("1/minute")
 async def get_specified_report(
+    request: Request, # Add request: Request
     file_name: str,
     extract_service: ExtractService = Depends(),
     metadata_service: MetadataService = Depends(),

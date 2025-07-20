@@ -7,6 +7,7 @@ from scheduling.scheduler import start_scheduler, stop_scheduler
 
 app = FastAPI()
 
+
 app.title = "App ETL And Analytics API for Oracle"
 app.version = "1.0.0"
 app.description = "ETL And Analytics API"
@@ -40,6 +41,7 @@ app.include_router(extract_router.router, prefix="/api")
 app.include_router(metadata_router.router, prefix="/api")
 app.include_router(analytics_router.router, prefix="/api")
 app.include_router(auth_router.router, prefix="/api")
+
 
 @app.on_event("startup")
 async def startup_event():
