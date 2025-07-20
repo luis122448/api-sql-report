@@ -196,13 +196,13 @@ def start_scheduler():
     metadata_service.clear_scheduler_logs_on_startup()
     logger.info("Cleared SCHEDULED_JOBS_LOG on startup.")
 
-    # Initial sequential execution of all reports
-    logger.info("Starting initial sequential execution of all reports...")
-    all_reports = ReportConfigLoader.get_reports_from_oracle()
-    for report in all_reports:
-        logger.info(f"Initial execution for report: {report.name}")
+    # Cleanup and initial sequential execution of URGENT reports
+    logger.info("Starting cleanup and initial sequential execution of URGENT reports...")
+    reports_to_run = metadata_service.cleanup_and_get_reports_to_reprocess(urgent_only=True)
+    for report in reports_to_run:
+        logger.info(f"Initial execution for URGENT report: {report.name}")
         run_scheduled_extraction(report.id_cia, report.id_report, report.name, report.query, report.company)
-    logger.info("Initial sequential execution of all reports finished.")
+    logger.info("Initial sequential execution of URGENT reports finished.")
 
     # Schedule the initial load and subsequent updates
     scheduler.add_job(

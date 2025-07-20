@@ -109,21 +109,12 @@ class ExtractService:
         if ":P02MOTIVO" in decoded_query:
             motivo = '-1'
             decoded_query = decoded_query.replace(":P02MOTIVO", f"'{motivo}'")
-        if ":P02PERIODO" in decoded_query:
-            period_value = datetime.now().strftime('%Y')
-            decoded_query = decoded_query.replace(":P02PERIODO", f"'{period_value}'")
         if ":P02PERIODO_ANTERIOR" in decoded_query:
             previous_period_value = (datetime.now() - pd.DateOffset(years=1)).strftime('%Y')
             decoded_query = decoded_query.replace(":P02PERIODO_ANTERIOR", f"'{previous_period_value}'")
-        if ":P02MES" in decoded_query:
-            month_value = "-1"
-            decoded_query = decoded_query.replace(":P02MES", f"'{month_value}'")
-        if ":P06MES" in decoded_query:
-            month_value = "-1"
-            decoded_query = decoded_query.replace(":P06MES", f"'{month_value}'")
-        if ":P07MES" in decoded_query:
-            month_value = "-1"
-            decoded_query = decoded_query.replace(":P07MES", f"'{month_value}'")
+        if ":P02PERIODO" in decoded_query:
+            period_value = datetime.now().strftime('%Y')
+            decoded_query = decoded_query.replace(":P02PERIODO", f"'{period_value}'")
         if ":P02MES_STOCK" in decoded_query:
             month_stock_value = datetime.now().strftime('%m')
             decoded_query = decoded_query.replace(":P02MES_STOCK", f"'{month_stock_value}'")
@@ -136,6 +127,15 @@ class ExtractService:
         if ":P06MES_COSTO" in decoded_query:
             month_costs_value = (datetime.now() - pd.DateOffset(months=1)).strftime('%m')
             decoded_query = decoded_query.replace(":P06MES_COSTO", f"'{month_costs_value}'")
+        if ":P02MES" in decoded_query:
+            month_value = "-1"
+            decoded_query = decoded_query.replace(":P02MES", f"'{month_value}'")
+        if ":P06MES" in decoded_query:
+            month_value = "-1"
+            decoded_query = decoded_query.replace(":P06MES", f"'{month_value}'")
+        if ":P07MES" in decoded_query:
+            month_value = "-1"
+            decoded_query = decoded_query.replace(":P07MES", f"'{month_value}'")
         if ":P04FECHA_DESDE" in decoded_query:
             start_date_value = (datetime.now() - pd.DateOffset(years=3)).strftime('%Y-%m-%d')
             decoded_query = decoded_query.replace(":P04FECHA_DESDE", f"TO_DATE('{start_date_value}', 'YYYY-MM-DD')")

@@ -19,11 +19,9 @@ def init_db():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Drop and recreate METADATA_REPORT table to apply schema changes
-        # WARNING: This will delete all existing data in METADATA_REPORT table.
-        cursor.execute("DROP TABLE IF EXISTS METADATA_REPORT")
+        # Create METADATA_REPORT table (no changes needed here, but ensure it exists)
         cursor.execute("""
-            CREATE TABLE METADATA_REPORT (
+            CREATE TABLE IF NOT EXISTS METADATA_REPORT (
                 id_cia INTEGER NOT NULL,
                 id_report INTEGER NOT NULL,
                 name TEXT NOT NULL,

@@ -141,6 +141,55 @@ class MetadataService:
         finally:
             conn.close()
 
+    def cleanup_and_get_reports_to_reprocess(self, urgent_only=False):
+        # Cleans up failed reports and identifies reports that need to be reprocessed.
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+
+            # 1. Delete failed reports
+            cursor.execute("DELETE FROM METADATA_REPORT WHERE status = 'FAILED'")
+            conn.commit()
+            print(f"Deleted {cursor.rowcount} failed reports from METADATA_REPORT.")
+
+            # 2. Get all configured reports from Oracle
+            all_reports = ReportConfigLoader.get_reports_from_oracle()
+            reports_to_reprocess = []
+
+            # Filter for urgent reports if requested
+            reports_to_check = [r for r in all_reports if r.refreshtime <= 60] if urgent_only else all_reports
+
+            for report in reports_to_check:
+                # 3. Check for the latest successful execution of the report
+                latest_successful_exec = self.get_latest_report_metadata(report.id_cia, report.id_report)
+
+                if not latest_successful_exec:
+                    # Reprocess if no successful execution exists
+                    reports_to_reprocess.append(report)
+                    print(f"Report {report.name} marked for reprocessing (no successful execution found).")
+                else:
+                    # Reprocess if the report is outdated
+                    last_exec_str = latest_successful_exec['last_exec']
+                    # Convert string to datetime object
+                    last_exec_time = datetime.fromisoformat(last_exec_str)
+                    
+                    # Ensure last_exec_time is offset-aware for comparison
+                    if last_exec_time.tzinfo is None:
+                        last_exec_time = last_exec_time.astimezone()
+
+                    now_aware = datetime.now().astimezone()
+                    if now_aware - last_exec_time > timedelta(minutes=report.refreshtime):
+                        reports_to_reprocess.append(report)
+                        print(f"Report {report.name} marked for reprocessing (outdated).")
+
+            return reports_to_reprocess
+
+        except sqlite3.Error as e:
+            print(f"Error during cleanup and reprocessing check: {e}")
+            return []
+        finally:
+            conn.close()
+
     def clear_scheduler_logs_on_startup(self):
         # Clears all entries from SCHEDULED_JOBS_LOG table. Used on application startup.
         conn = get_db_connection()
