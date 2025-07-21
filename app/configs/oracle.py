@@ -1,4 +1,5 @@
-import os, logging
+import os
+import logging
 import oracledb
 from dotenv import load_dotenv
 from utils.path import BASEDIR

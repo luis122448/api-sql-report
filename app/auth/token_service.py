@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, Any
+
 import os # Import os
 from dotenv import load_dotenv # Import load_dotenv
 
@@ -37,7 +37,7 @@ class TokenService:
                 coduser=data_token.get('coduser'),
                 days_to_token_expire=int((datetime.fromtimestamp(data_token.get('exp')) - datetime.now()).days)
             )
-        except ExpiredSignatureError as e:
+        except ExpiredSignatureError:
             logger.error("Token expired Function")
             raise
         except InvalidTokenError as e:
@@ -48,7 +48,7 @@ class TokenService:
         try:
             decode(token, key=self.SECRET_KEY, algorithms=[self.ALGORITHM])
             return True
-        except ExpiredSignatureError as e:
+        except ExpiredSignatureError:
             logger.error("Token expired Function")
             return False
         except InvalidTokenError as e:

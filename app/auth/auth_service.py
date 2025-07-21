@@ -1,4 +1,7 @@
-import requests, logging, os, base64
+import requests
+import logging
+import os
+import base64
 from dotenv import load_dotenv
 from fastapi import Depends
 from schemas.api_response_schema import ApiResponseAuth

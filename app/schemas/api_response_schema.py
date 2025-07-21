@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, Any, List, Dict
-from datetime import date, datetime
+from datetime import datetime
 
 
 class ApiResponseSchema(BaseModel):

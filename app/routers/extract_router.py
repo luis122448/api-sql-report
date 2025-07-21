@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, Response, status, Request
-from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder
+from fastapi import APIRouter, Depends, Request
+
+
 from services.extract_service import ExtractService
 from schemas.api_response_schema import ApiResponseObject
 from pydantic import BaseModel

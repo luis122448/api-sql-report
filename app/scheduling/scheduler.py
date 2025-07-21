@@ -7,7 +7,8 @@ from configs.oracle import OracleTransaction, get_oracle_connection
 from services.extract_service import ExtractService
 from services.minio_service import MinioService
 from services.metadata_service import MetadataService
-from scheduling.report_config_loader import ReportConfigLoader, Report
+from scheduling.report_config_loader import ReportConfigLoader
+from core.config_manager import ReportConfigManager
 from configs.minio import MinioConfig # Import MinioConfig
 
 logging.basicConfig(level=logging.INFO)
@@ -108,6 +109,18 @@ def update_scheduled_jobs():
     # This function is called periodically by the scheduler itself.
     logger.info("Updating scheduled jobs from Oracle configuration...")
     current_reports = ReportConfigLoader.get_reports_from_oracle()
+    
+    # Group reports by company for ReportConfigManager
+    grouped_reports = {}
+    for report in current_reports:
+        if report.company not in grouped_reports:
+            grouped_reports[report.company] = []
+        grouped_reports[report.company].append(report)
+    
+    # Update the ReportConfigManager
+    report_config_manager = ReportConfigManager()
+    report_config_manager.set_report_configs(grouped_reports)
+
     current_job_ids = {job.id for job in scheduler.get_jobs()}
     
     new_report_ids = set()
@@ -150,7 +163,7 @@ def update_scheduled_jobs():
                 report_name=report.name, 
                 report_company=report.company, # Pass company here
                 event_type='job_added',
-                message=f"Scheduled daily job at 03:00 AM."
+                message="Scheduled daily job at 03:00 AM."
                 # next_run_time=added_job.next_run_time # Removed this line
             )
             logger.info(f"Scheduled daily job for Report ID: {report.id_report} (Name: {report.name}) at 03:00 AM.")

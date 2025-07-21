@@ -1,8 +1,8 @@
 import logging
-from fastapi import Request, HTTPException, Depends, status
+from fastapi import Request, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from auth.token_service import TokenService
-from starlette.exceptions import HTTPException as StarletteHTTPException
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

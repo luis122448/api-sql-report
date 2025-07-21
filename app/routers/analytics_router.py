@@ -6,7 +6,7 @@ from fastapi.encoders import jsonable_encoder
 from services.extract_service import ExtractService
 from services.metadata_service import MetadataService
 from services.usage_service import UsageService # Import UsageService
-from typing import Dict, Any
+
 from auth.auth_handler import JWTBearer
 from schemas.auth_schema import BasicAnalyticsSchema
 from slowapi import Limiter
@@ -57,7 +57,8 @@ async def get_last_report(
             return JSONResponse(content=jsonable_encoder(error_response), status_code=status.HTTP_404_NOT_FOUND)
 
         headers = {"X-Log-User": token.coduser, "X-Days-To-Token-Expire": str(token.days_to_token_expire)}
-        if last_etl_exec: headers["X-Last-Etl-Exec"] = last_etl_exec.isoformat()
+        if last_etl_exec:
+            headers["X-Last-Etl-Exec"] = last_etl_exec.isoformat()
 
         return Response(content=parquet_data, media_type="application/vnd.apache.parquet", headers=headers)
     except Exception as e:
@@ -117,7 +118,8 @@ async def get_specified_report(
             return JSONResponse(content=jsonable_encoder(error_response), status_code=status.HTTP_404_NOT_FOUND)
 
         headers = {"X-Log-User": token.coduser, "X-Days-To-Token-Expire": str(token.days_to_token_expire)}
-        if last_etl_exec: headers["X-Last-Etl-Exec"] = last_etl_exec.isoformat()
+        if last_etl_exec:
+            headers["X-Last-Etl-Exec"] = last_etl_exec.isoformat()
 
         return Response(content=parquet_data, media_type="application/vnd.apache.parquet", headers=headers)
     except Exception as e:

@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, Response, status
-from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder
+from fastapi import APIRouter, Depends
+
+
 from services.metadata_service import MetadataService
-from typing import List, Dict, Any
+
 from schemas.api_response_schema import ApiResponseList # Import ApiResponseList
 
 router = APIRouter(tags=["Metadata & Dashboard"])

@@ -1,5 +1,5 @@
 import logging
-import oracledb
+
 from configs.oracle import OracleTransaction
 from pydantic import BaseModel, Field
 
