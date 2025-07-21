@@ -113,12 +113,39 @@ class MetadataService:
             cursor = conn.cursor()
             one_week_ago = datetime.now() - timedelta(weeks=1)
             cursor.execute("""
-                SELECT job_id, report_id_cia, report_id_report, report_name, report_company, 
-                       event_type, timestamp, message, next_run_time, duration_ms, status
-                FROM SCHEDULED_JOBS_LOG
-                WHERE timestamp >= ?
-                ORDER BY timestamp DESC
-            """, (one_week_ago,))
+                SELECT
+                    sjl.job_id,
+                    sjl.report_id_cia,
+                    sjl.report_id_report,
+                    sjl.report_name,
+                    sjl.report_company,
+                    sjl.event_type,
+                    sjl.timestamp,
+                    sjl.message,
+                    sjl.next_run_time,
+                    mre.processing_time_ms AS last_execution_duration_ms,
+                    mre.status AS last_execution_status,
+                    mre.last_exec AS last_execution_time
+                FROM
+                    SCHEDULED_JOBS_LOG sjl
+                LEFT JOIN (
+                    SELECT
+                        id_cia,
+                        id_report,
+                        processing_time_ms,
+                        status,
+                        last_exec,
+                        ROW_NUMBER() OVER (PARTITION BY id_cia, id_report ORDER BY last_exec DESC) as rn
+                    FROM
+                        METADATA_REPORT
+                ) mre ON sjl.report_id_cia = mre.id_cia
+                     AND sjl.report_id_report = mre.id_report
+                     AND mre.rn = 1
+                WHERE
+                    sjl.event_type = 'job_added'
+                ORDER BY
+                    sjl.timestamp DESC
+            """)
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
         except sqlite3.Error as e:
