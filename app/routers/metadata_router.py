@@ -1,9 +1,6 @@
 from fastapi import APIRouter, Depends
-
-
 from services.metadata_service import MetadataService
-
-from schemas.api_response_schema import ApiResponseList # Import ApiResponseList
+from schemas.api_response_schema import ApiResponseList
 
 router = APIRouter(tags=["Metadata & Dashboard"])
 

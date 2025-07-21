@@ -5,8 +5,7 @@ from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from services.extract_service import ExtractService
 from services.metadata_service import MetadataService
-from services.usage_service import UsageService # Import UsageService
-
+from services.usage_service import UsageService
 from auth.auth_handler import JWTBearer
 from schemas.auth_schema import BasicAnalyticsSchema
 from slowapi import Limiter

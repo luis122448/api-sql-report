@@ -9,7 +9,7 @@ from services.minio_service import MinioService
 from services.metadata_service import MetadataService
 from scheduling.report_config_loader import ReportConfigLoader
 from core.config_manager import ReportConfigManager
-from configs.minio import MinioConfig # Import MinioConfig
+from configs.minio import MinioConfig
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
