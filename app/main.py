@@ -13,7 +13,7 @@ app.version = "1.0.0"
 app.description = "ETL And Analytics API"
 app.docs_url = "/docs"
 
-origins = ["*"] 
+# origins = ["*"] 
 
 # Add middleware
 # app.add_middleware(ExceptionHandlerMiddleware)
@@ -26,7 +26,7 @@ origins = ["*"]
 # )
 
 # Exception Handler
-app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+# app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 
 app.include_router(extract_router.router, prefix="/api")
 app.include_router(metadata_router.router, prefix="/api")
