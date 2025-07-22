@@ -3,6 +3,7 @@ __pycache__
 venv
 .venv
 .env
+.ruff_cache
 logs
 instantclient_21_10
 .vscode

@@ -137,16 +137,16 @@ spec:
                 secretKeyRef:
                   name: database-secrets
                   key: MINIO_URL
-            - name: MINIO_ACCESS_KEY
+            - name: MINIO_ROOT_USER
               valueFrom:
                 secretKeyRef:
                   name: database-secrets
-                  key: MINIO_ACCESS_KEY
-            - name: MINIO_SECRET_KEY
+                  key: MINIO_ROOT_USER
+            - name: MINIO_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: database-secrets
-                  key: MINIO_SECRET_KEY
+                  key: MINIO_ROOT_PASSWORD
             - name: JWT_SECRET_KEY
               valueFrom:
                 secretKeyRef:

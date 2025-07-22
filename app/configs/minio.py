@@ -8,7 +8,7 @@ class MinioConfig:
     def __init__(self):
         self.client = Minio(
             os.getenv("MINIO_URL"),
-            access_key=os.getenv("MINIO_ACCESS_KEY"),
-            secret_key=os.getenv("MINIO_SECRET_KEY"),
+            access_key=os.getenv("MINIO_ROOT_USER"),
+            secret_key=os.getenv("MINIO_ROOT_PASSWORD"),
             secure=False
         )
