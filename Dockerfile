@@ -20,11 +20,7 @@ ENV DPI_DEBUG_LEVEL=64
 ENV LD_LIBRARY_PATH=/opt/oracle_home/instantclient
 ENV ORACLE_HOME=/opt/oracle_home/instantclient
 
-# RUN /bin/bash -c "/opt/install-instantclient.sh"
-# RUN ls -l /opt/oracle_home/instantclient
-
-COPY ./entrypoint.sh /opt/entrypoint.sh
-RUN chmod +x /opt/entrypoint.sh
+RUN /bin/bash -c "/opt/oracle_home/install-instantclient.sh"
 
 EXPOSE 8001
-CMD ["/opt/entrypoint.sh"]
+CMD [ "python", "app/server.py" ]

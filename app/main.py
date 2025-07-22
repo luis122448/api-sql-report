@@ -13,16 +13,7 @@ app.version = "1.0.0"
 app.description = "ETL And Analytics API"
 app.docs_url = "/docs"
 
-origins = [
-    "https://testing.grupotsiperu.com.pe:8844",
-    "https://testing.grupotsiperu.com.pe:8843",
-    "https://web.grupotsiperu.com.pe:8445",
-    "https://web.grupotsiperu.com.pe:8843",
-    "http://localhost:4200",
-    "http://localhost:4600",
-    "http://localhost:4800",
-    "http://localhost:8000"
-]
+origins = ["*"] 
 
 # Add middleware
 app.add_middleware(ExceptionHandlerMiddleware)
