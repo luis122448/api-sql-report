@@ -16,14 +16,14 @@ app.docs_url = "/docs"
 origins = ["*"] 
 
 # Add middleware
-app.add_middleware(ExceptionHandlerMiddleware)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST"],
-    allow_headers=["*"],
-)
+# app.add_middleware(ExceptionHandlerMiddleware)
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=origins,
+#     allow_credentials=True,
+#     allow_methods=["GET", "POST"],
+#     allow_headers=["*"],
+# )
 
 # Exception Handler
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
