@@ -11,11 +11,12 @@ RUN apt-get update && \
 
 COPY ./app /opt/app/
 COPY ./oracle_home/*.zip /opt/oracle_home/
-COPY ./oracle_home/build-install-instantclient.sh /opt/install-instantclient.sh
-RUN chmod +x /opt/install-instantclient.sh
+COPY ./oracle_home/build-install-instantclient.sh /opt/oracle_home/install-instantclient.sh
+RUN chmod +x /opt/oracle_home/install-instantclient.sh
 RUN mkdir -p /opt/database
 RUN apt-get update && apt-get install -y libaio1
 
+ENV DPI_DEBUG_LEVEL=64
 ENV LD_LIBRARY_PATH=/opt/oracle_home/instantclient
 ENV ORACLE_HOME=/opt/oracle_home/instantclient
 

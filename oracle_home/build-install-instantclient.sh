@@ -25,15 +25,18 @@ else
     exit 1
 fi
 
-unzip -n "./oracle_home/$BASIC_ZIP" -d /opt/oracle_home
-unzip -n "./oracle_home/$SQLPLUS_ZIP" -d /opt/oracle_home
-unzip -n "./oracle_home/$TOOLS_ZIP" -d /opt/oracle_home
-unzip -n "./oracle_home/$SDK_ZIP" -d /opt/oracle_home
+unzip -n "/opt/oracle_home/$BASIC_ZIP" -d /opt/oracle_home
+unzip -n "/opt/oracle_home/$SQLPLUS_ZIP" -d /opt/oracle_home
+unzip -n "/opt/oracle_home/$TOOLS_ZIP" -d /opt/oracle_home
+unzip -n "/opt/oracle_home/$SDK_ZIP" -d /opt/oracle_home
 
-mv ./oracle_home/instantclient_23_8 /opt/oracle_home/instantclient
-cp ./app/keys/sqlnet.ora /opt/oracle_home/instantclient/network/admin
-cp ./app/keys/tnsnames.ora /opt/oracle_home/instantclient/network/admin
-cp ./app/keys/cwallet.sso /opt/oracle_home/instantclient/network/admin
+rm -rf /opt/oracle_home/instantclient/*
+mkdir -p /opt/oracle_home/instantclient/
 
-# Only for debugging purposes
-export DPI_DEBUG_LEVEL=64
+mv /opt/oracle_home/instantclient_23_8/* /opt/oracle_home/instantclient/
+cp /opt/app/keys/sqlnet.ora /opt/oracle_home/instantclient/network/admin
+cp /opt/app/keys/tnsnames.ora /opt/oracle_home/instantclient/network/admin
+cp /opt/app/keys/cwallet.sso /opt/oracle_home/instantclient/network/admin
+
+rm -rf /opt/oracle_home/instantclient_23_8
+rm -rf /opt/oracle_home/META-INF
