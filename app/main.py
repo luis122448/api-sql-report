@@ -31,7 +31,7 @@ app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.include_router(extract_router.router, prefix="/api")
 app.include_router(metadata_router.router, prefix="/api")
 app.include_router(analytics_router.router, prefix="/api")
-app.include_router(auth_router.router, prefix="/api")
+app.include_router(auth_router.router, prefix="/auth")
 app.include_router(usage_router.router, prefix="/api")
 
 

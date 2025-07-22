@@ -21,4 +21,3 @@ services:
     restart: always
     volumes:
       - /opt/sql-report/database:/opt/database
-    network_mode: "host"
