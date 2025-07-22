@@ -15,8 +15,8 @@ DB_ORACLE_USER=your_oracle_user
 DB_ORACLE_PASSWORD=your_oracle_password
 DB_ORACLE_DSN=your_oracle_dsn
 MINIO_URL=your_minio_url
-MINIO_ROOT_USER=your_MINIO_ROOT_USER
-MINIO_ROOT_PASSWORD=your_MINIO_ROOT_PASSWORD
+MINIO_ROOT_USER=your_minio_root_user
+MINIO_ROOT_PASSWORD=your_minio_root_password
 JWT_SECRET_KEY=your_jwt_secret_key
 ```
 
