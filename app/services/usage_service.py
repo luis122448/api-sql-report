@@ -1,11 +1,17 @@
 import sqlite3
+import logging
 from datetime import datetime, timedelta
 from configs.sqlite import get_db_connection
 from schemas.api_response_schema import ApiResponseList
 
+logger = logging.getLogger(__name__)
+
 class UsageService:
     def log_api_request(self, id_cia: int, id_report: int, requester_ip: str, endpoint: str, user_agent: str, token_coduser: str, processing_time_ms: int):
         conn = get_db_connection()
+        if not conn:
+            logger.error("Failed to get database connection for logging API request.")
+            return
         try:
             cursor = conn.cursor()
             cursor.execute("""
@@ -14,13 +20,18 @@ class UsageService:
             """, (datetime.now(), id_cia, id_report, requester_ip, endpoint, user_agent, token_coduser, processing_time_ms))
             conn.commit()
         except sqlite3.Error as e:
-            print(f"Error logging API usage: {e}")
+            logger.error(f"Error logging API usage: {e}")
         finally:
             conn.close()
 
     def get_top_reports(self, id_cia: int = -1) -> ApiResponseList:
         response = ApiResponseList(status=1, message="Top reports retrieved successfully.")
         conn = get_db_connection()
+        if not conn:
+            response.status = 1.2
+            response.message = "ERROR!"
+            response.log_message = "Failed to connect to the database."
+            return response
         try:
             cursor = conn.cursor()
             one_week_ago = datetime.now() - timedelta(weeks=1)
@@ -61,6 +72,11 @@ class UsageService:
     def get_usage_details(self, id_cia: int, id_report: int) -> ApiResponseList:
         response = ApiResponseList(status=1, message="Usage details retrieved successfully.")
         conn = get_db_connection()
+        if not conn:
+            response.status = 1.2
+            response.message = "ERROR!"
+            response.log_message = "Failed to connect to the database."
+            return response
         try:
             cursor = conn.cursor()
             one_week_ago = datetime.now() - timedelta(weeks=1)
