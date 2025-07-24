@@ -1,10 +1,13 @@
 import sqlite3
 import pytz
+import logging
 from datetime import datetime, timedelta
 from configs.sqlite import get_db_connection
 from schemas.api_response_schema import ApiResponseObject
 from scheduling.report_config_loader import ReportConfigLoader # Import the loader
 from typing import Any # Import Any
+
+logger = logging.getLogger(__name__)
 
 class MetadataService:
     def log_report_metadata(self, id_cia: int, id_report: int, name: str, cadsql: str, 
@@ -14,6 +17,11 @@ class MetadataService:
         # Logs the metadata of a generated report into the SQLite database.
         response = ApiResponseObject(status=1, message="Metadata logged successfully.")
         conn = get_db_connection()
+        if not conn:
+            response.status = 1.2
+            response.message = "ERROR!"
+            response.log_message = "Failed to connect to the database."
+            return response
         try:
             peru_tz = pytz.timezone('America/Lima')
             now_in_peru = datetime.now(peru_tz)
@@ -39,6 +47,9 @@ class MetadataService:
     def get_report_metadata(self, id_cia: int, object_name: str):
         # Retrieves metadata for a specific report based on id_cia and object_name.
         conn = get_db_connection()
+        if not conn:
+            logger.error("Failed to connect to the database.")
+            return None
         try:
             cursor = conn.cursor()
             cursor.execute("""
@@ -51,7 +62,7 @@ class MetadataService:
                 return dict(row)
             return None
         except sqlite3.Error as e:
-            print(f"Error retrieving metadata: {e}")
+            logger.error(f"Error retrieving metadata: {e}")
             return None
         finally:
             conn.close()
@@ -59,6 +70,9 @@ class MetadataService:
     def get_latest_report_metadata(self, id_cia: int, id_report: int):
         # Retrieves the most recent metadata entry for a given id_cia and id_report.
         conn = get_db_connection()
+        if not conn:
+            logger.error("Failed to connect to the database.")
+            return None
         try:
             cursor = conn.cursor()
             cursor.execute("""
@@ -73,7 +87,7 @@ class MetadataService:
                 return dict(row)
             return None
         except sqlite3.Error as e:
-            print(f"Error retrieving latest metadata: {e}")
+            logger.error(f"Error retrieving latest metadata: {e}")
             return None
         finally:
             conn.close()
@@ -86,6 +100,9 @@ class MetadataService:
         # Logs events related to scheduled jobs into the SCHEDULED_JOBS_LOG table.
         # event_type can be 'job_added', 'job_removed', 'job_started', 'job_completed', 'job_failed'.
         conn = get_db_connection()
+        if not conn:
+            logger.error("Failed to connect to the database.")
+            return
         try:
             peru_tz = pytz.timezone('America/Lima')
             now_in_peru = datetime.now(peru_tz)
@@ -104,7 +121,7 @@ class MetadataService:
             ))
             conn.commit()
         except sqlite3.Error as e:
-            print(f"Error logging scheduler event: {e}")
+            logger.error(f"Error logging scheduler event: {e}")
         finally:
             conn.close()
 
@@ -117,6 +134,9 @@ class MetadataService:
     def get_weekly_report_execution_details_metadata(self, id_cia: int = -1) -> list[dict[str, Any]]: # Changed List[Dict[str, Any]] to list[dict[str, Any]]
         # Returns a list of all report executions in the last week with their status and details.
         conn = get_db_connection()
+        if not conn:
+            logger.error("Failed to connect to the database.")
+            return []
         try:
             cursor = conn.cursor()
             
@@ -166,7 +186,7 @@ class MetadataService:
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
         except sqlite3.Error as e:
-            print(f"Error retrieving weekly execution details: {e}")
+            logger.error(f"Error retrieving weekly execution details: {e}")
             return []
         finally:
             conn.close()
@@ -174,6 +194,9 @@ class MetadataService:
     def clean_old_scheduler_logs(self):
         # Deletes scheduler logs older than one week.
         conn = get_db_connection()
+        if not conn:
+            logger.error("Failed to connect to the database.")
+            return
         try:
             peru_tz = pytz.timezone('America/Lima')
             now_in_peru = datetime.now(peru_tz)
@@ -181,15 +204,18 @@ class MetadataService:
             one_week_ago = now_in_peru - timedelta(weeks=1)
             cursor.execute("DELETE FROM SCHEDULED_JOBS_LOG WHERE timestamp < ?", (one_week_ago,))
             conn.commit()
-            print(f"Cleaned old scheduler logs. Deleted {cursor.rowcount} entries.")
+            logger.info(f"Cleaned old scheduler logs. Deleted {cursor.rowcount} entries.")
         except sqlite3.Error as e:
-            print(f"Error cleaning old scheduler logs: {e}")
+            logger.error(f"Error cleaning old scheduler logs: {e}")
         finally:
             conn.close()
 
     def cleanup_and_get_reports_to_reprocess(self, urgent_only=False):
         # Cleans up failed reports and identifies reports that need to be reprocessed.
         conn = get_db_connection()
+        if not conn:
+            logger.error("Failed to connect to the database.")
+            return []
         try:
             peru_tz = pytz.timezone('America/Lima')
             cursor = conn.cursor()
@@ -197,7 +223,7 @@ class MetadataService:
             # 1. Delete failed reports
             cursor.execute("DELETE FROM METADATA_REPORT WHERE status = 'FAILED'")
             conn.commit()
-            print(f"Deleted {cursor.rowcount} failed reports from METADATA_REPORT.")
+            logger.info(f"Deleted {cursor.rowcount} failed reports from METADATA_REPORT.")
 
             # 2. Get all configured reports from Oracle
             all_reports = ReportConfigLoader.get_reports_from_oracle()
@@ -213,7 +239,7 @@ class MetadataService:
                 if not latest_successful_exec:
                     # Reprocess if no successful execution exists
                     reports_to_reprocess.append(report)
-                    print(f"Report {report.name} marked for reprocessing (no successful execution found).")
+                    logger.info(f"Report {report.name} marked for reprocessing (no successful execution found).")
                 else:
                     # Reprocess if the report is outdated
                     last_exec_str = latest_successful_exec['last_exec']
@@ -227,12 +253,12 @@ class MetadataService:
                     now_aware = datetime.now(peru_tz)
                     if now_aware - last_exec_time > timedelta(minutes=report.refreshtime):
                         reports_to_reprocess.append(report)
-                        print(f"Report {report.name} marked for reprocessing (outdated).")
+                        logger.info(f"Report {report.name} marked for reprocessing (outdated).")
 
             return reports_to_reprocess
 
         except sqlite3.Error as e:
-            print(f"Error during cleanup and reprocessing check: {e}")
+            logger.error(f"Error during cleanup and reprocessing check: {e}")
             return []
         finally:
             conn.close()
@@ -240,12 +266,15 @@ class MetadataService:
     def clear_scheduler_logs_on_startup(self):
         # Clears all entries from SCHEDULED_JOBS_LOG table. Used on application startup.
         conn = get_db_connection()
+        if not conn:
+            logger.error("Failed to connect to the database.")
+            return
         try:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM SCHEDULED_JOBS_LOG")
             conn.commit()
-            print(f"Cleared SCHEDULED_JOBS_LOG table on startup. Deleted {cursor.rowcount} entries.")
+            logger.info(f"Cleared SCHEDULED_JOBS_LOG table on startup. Deleted {cursor.rowcount} entries.")
         except sqlite3.Error as e:
-            print(f"Error clearing scheduler logs on startup: {e}")
+            logger.error(f"Error clearing scheduler logs on startup: {e}")
         finally:
             conn.close()
