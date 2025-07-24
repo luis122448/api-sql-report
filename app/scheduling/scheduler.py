@@ -1,4 +1,5 @@
 import logging
+import pytz
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -26,7 +27,8 @@ def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str,
     # Executes the extraction pipeline for a given report.
     # This function is called by the scheduler.
     job_id = f"report_{id_cia}_{id_report}"
-    start_time = datetime.now()
+    peru_tz = pytz.timezone('America/Lima')
+    start_time = datetime.now(peru_tz)
     logger.info(f"SCHEDULER: Starting job {job_id} for report '{name}'.")
 
     schedule_type = ""
@@ -120,6 +122,7 @@ def update_scheduled_jobs():
     # This function is called periodically by the scheduler itself.
     logger.info("Updating scheduled jobs from Oracle configuration...")
     current_reports = ReportConfigLoader.get_reports_from_oracle()
+    peru_tz = pytz.timezone('America/Lima')
     
     # Group reports by company for ReportConfigManager
     grouped_reports = {}
@@ -168,7 +171,7 @@ def update_scheduled_jobs():
 
         # Add or re-add the job
         if report.refreshtime > 999:
-            trigger = CronTrigger(hour=3, minute=0)
+            trigger = CronTrigger(hour=3, minute=0, timezone=peru_tz)
             scheduler.add_job(
                 run_scheduled_extraction,
                 trigger,
@@ -190,7 +193,7 @@ def update_scheduled_jobs():
             )
             logger.info(f"Scheduled daily job for Report ID: {report.id_report} (Name: {report.name}) at 03:00 AM.")
         else:
-            trigger = IntervalTrigger(minutes=report.refreshtime)
+            trigger = IntervalTrigger(minutes=report.refreshtime, timezone=peru_tz)
             scheduler.add_job(
                 run_scheduled_extraction,
                 trigger,
@@ -227,6 +230,7 @@ def update_scheduled_jobs():
 def start_scheduler():
     # Initializes and starts the APScheduler, scheduling reports based on Oracle configuration.
     logger.info("Starting report scheduler...")
+    peru_tz = pytz.timezone('America/Lima')
     
     # Clear scheduler logs on startup
     metadata_service.clear_scheduler_logs_on_startup()
@@ -249,7 +253,7 @@ def start_scheduler():
     # Schedule the initial load and subsequent updates
     scheduler.add_job(
         update_scheduled_jobs,
-        IntervalTrigger(minutes=60), # Update every 60 minutes
+        IntervalTrigger(minutes=60, timezone=peru_tz), # Update every 60 minutes
         id='update_job_config',
         name='Update Report Configurations',
         replace_existing=True

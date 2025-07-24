@@ -1,4 +1,5 @@
 import sqlite3
+import pytz
 from datetime import datetime, timedelta
 from configs.sqlite import get_db_connection
 from schemas.api_response_schema import ApiResponseObject
@@ -14,11 +15,13 @@ class MetadataService:
         response = ApiResponseObject(status=1, message="Metadata logged successfully.")
         conn = get_db_connection()
         try:
+            peru_tz = pytz.timezone('America/Lima')
+            now_in_peru = datetime.now(peru_tz)
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO METADATA_REPORT (id_cia, id_report, name, cadsql, object_name, last_exec, processing_time_ms, status, error_message)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (id_cia, id_report, name, cadsql, object_name, last_exec, processing_time_ms, status, error_message))
+            """, (id_cia, id_report, name, cadsql, object_name, last_exec or now_in_peru, processing_time_ms, status, error_message))
             conn.commit()
             response.object = {"id_cia": id_cia, "id_report": id_report}
         except sqlite3.IntegrityError:
@@ -84,6 +87,8 @@ class MetadataService:
         # event_type can be 'job_added', 'job_removed', 'job_started', 'job_completed', 'job_failed'.
         conn = get_db_connection()
         try:
+            peru_tz = pytz.timezone('America/Lima')
+            now_in_peru = datetime.now(peru_tz)
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO SCHEDULED_JOBS_LOG (
@@ -94,7 +99,7 @@ class MetadataService:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 job_id, id_cia, id_report, name, company, 
-                event_type, datetime.now(), message, next_run_time, duration_ms, status,
+                event_type, now_in_peru, message, next_run_time, duration_ms, status,
                 refresh_time, schedule_type
             ))
             conn.commit()
@@ -170,8 +175,10 @@ class MetadataService:
         # Deletes scheduler logs older than one week.
         conn = get_db_connection()
         try:
+            peru_tz = pytz.timezone('America/Lima')
+            now_in_peru = datetime.now(peru_tz)
             cursor = conn.cursor()
-            one_week_ago = datetime.now() - timedelta(weeks=1)
+            one_week_ago = now_in_peru - timedelta(weeks=1)
             cursor.execute("DELETE FROM SCHEDULED_JOBS_LOG WHERE timestamp < ?", (one_week_ago,))
             conn.commit()
             print(f"Cleaned old scheduler logs. Deleted {cursor.rowcount} entries.")
@@ -184,6 +191,7 @@ class MetadataService:
         # Cleans up failed reports and identifies reports that need to be reprocessed.
         conn = get_db_connection()
         try:
+            peru_tz = pytz.timezone('America/Lima')
             cursor = conn.cursor()
 
             # 1. Delete failed reports
@@ -216,7 +224,7 @@ class MetadataService:
                     if last_exec_time.tzinfo is None:
                         last_exec_time = last_exec_time.astimezone()
 
-                    now_aware = datetime.now().astimezone()
+                    now_aware = datetime.now(peru_tz)
                     if now_aware - last_exec_time > timedelta(minutes=report.refreshtime):
                         reports_to_reprocess.append(report)
                         print(f"Report {report.name} marked for reprocessing (outdated).")
