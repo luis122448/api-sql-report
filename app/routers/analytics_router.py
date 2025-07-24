@@ -16,7 +16,7 @@ limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(tags=["Analytics Reports"])
 
 @router.get("/reports/last/{id_report}", dependencies=[Depends(JWTBearer())])
-@limiter.limit("4/minute")
+@limiter.limit("6/minute")
 async def get_last_report(
     request: Request, # Add request: Request
     id_report: int,
@@ -27,17 +27,6 @@ async def get_last_report(
 ):
     start_time = time.time()
     try:
-        # Log the API request
-        usage_service.log_api_request(
-            id_cia=token.id_cia,
-            id_report=id_report,
-            requester_ip=request.client.host,
-            endpoint=request.url.path,
-            user_agent=request.headers.get("user-agent"),
-            token_coduser=token.coduser,
-            processing_time_ms=0 # Placeholder, will be updated in finally
-        )
-
         # Retrieves the latest generated report for a given company and report ID.
         # Get metadata first to check for last_exec and object_name
         metadata_entry = metadata_service.get_latest_report_metadata(token.id_cia, id_report)
@@ -75,7 +64,7 @@ async def get_last_report(
         )
 
 @router.get("/reports/specified/{file_name}", dependencies=[Depends(JWTBearer())])
-@limiter.limit("4/minute")
+@limiter.limit("6/minute")
 async def get_specified_report(
     request: Request, # Add request: Request
     file_name: str,
@@ -86,17 +75,6 @@ async def get_specified_report(
 ):
     start_time = time.time()
     try:
-        # Log the API request
-        usage_service.log_api_request(
-            id_cia=token.id_cia,
-            id_report=None, # No specific report ID in this endpoint
-            requester_ip=request.client.host,
-            endpoint=request.url.path,
-            user_agent=request.headers.get("user-agent"),
-            token_coduser=token.coduser,
-            processing_time_ms=0 # Placeholder, will be updated in finally
-        )
-
         # Retrieves a specific report by company ID and file name.
         # Get metadata first to check for last_exec
         metadata_entry = metadata_service.get_report_metadata(token.id_cia, file_name) # Use token.id_cia
