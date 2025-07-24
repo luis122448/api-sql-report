@@ -10,13 +10,19 @@ database_path = os.path.join(BASEDIR, "database","metadata.db")
 
 def get_db_connection():
     logger.info(f"Connecting to database at {database_path}")
-    conn = sqlite3.connect(database_path)
-    conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        conn = sqlite3.connect(database_path)
+        conn.row_factory = sqlite3.Row
+        return conn
+    except sqlite3.Error as e:
+        logger.error(f"Database connection failed: {e}")
+        return None
 
 def init_db():
     try:
         conn = get_db_connection()
+        if not conn:
+            raise sqlite3.Error("Failed to get database connection.")
         cursor = conn.cursor()
         
         # Create METADATA_REPORT table (no changes needed here, but ensure it exists)
@@ -38,7 +44,7 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_id_cia_id_report ON METADATA_REPORT (id_cia, id_report)
         """)
         
-        cursor.execute("""DROP TABLE SCHEDULED_JOBS_LOG""")
+        cursor.execute("""DROP TABLE IF EXISTS SCHEDULED_JOBS_LOG""")
         # Create SCHEDULED_JOBS_LOG table (no changes needed here, but ensure it exists)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS SCHEDULED_JOBS_LOG (
