@@ -76,9 +76,10 @@ class MetadataService:
             conn.close()
 
     def log_scheduler_event(self, job_id: str, event_type: str, message: str = None, 
-                            report_id_cia: int = None, report_id_report: int = None, 
-                            report_name: str = None, next_run_time: datetime = None,
-                            duration_ms: int = None, status: str = None, report_company: str = None):
+                            id_cia: int = None, id_report: int = None, 
+                            name: str = None, next_run_time: datetime = None,
+                            duration_ms: int = None, status: str = None, company: str = None, 
+                            refresh_time: int = None, schedule_type: str = None):
         # Logs events related to scheduled jobs into the SCHEDULED_JOBS_LOG table.
         # event_type can be 'job_added', 'job_removed', 'job_started', 'job_completed', 'job_failed'.
         conn = get_db_connection()
@@ -86,13 +87,15 @@ class MetadataService:
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO SCHEDULED_JOBS_LOG (
-                    job_id, report_id_cia, report_id_report, report_name, report_company, 
-                    event_type, timestamp, message, next_run_time, duration_ms, status
+                    job_id, id_cia, id_report, name, company, 
+                    event_type, timestamp, message, next_run_time, duration_ms, status,
+                    refresh_time, schedule_type
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                job_id, report_id_cia, report_id_report, report_name, report_company, 
-                event_type, datetime.now(), message, next_run_time, duration_ms, status
+                job_id, id_cia, id_report, name, company, 
+                event_type, datetime.now(), message, next_run_time, duration_ms, status,
+                refresh_time, schedule_type
             ))
             conn.commit()
         except sqlite3.Error as e:
@@ -106,22 +109,25 @@ class MetadataService:
         reports = ReportConfigLoader.get_reports_from_oracle()
         return [report.dict() for report in reports]
 
-    def get_weekly_report_execution_details_metadata(self) -> list[dict[str, Any]]: # Changed List[Dict[str, Any]] to list[dict[str, Any]]
+    def get_weekly_report_execution_details_metadata(self, id_cia: int = -1) -> list[dict[str, Any]]: # Changed List[Dict[str, Any]] to list[dict[str, Any]]
         # Returns a list of all report executions in the last week with their status and details.
         conn = get_db_connection()
         try:
             cursor = conn.cursor()
-            cursor.execute("""
+            
+            query = """
                 SELECT
                     sjl.job_id,
-                    sjl.report_id_cia,
-                    sjl.report_id_report,
-                    sjl.report_name,
-                    sjl.report_company,
+                    sjl.id_cia,
+                    sjl.id_report,
+                    sjl.name,
+                    sjl.company,
                     sjl.event_type,
                     sjl.timestamp,
                     sjl.message,
                     sjl.next_run_time,
+                    sjl.refresh_time,
+                    sjl.schedule_type,
                     mre.processing_time_ms AS last_execution_duration_ms,
                     mre.status AS last_execution_status,
                     mre.last_exec AS last_execution_time
@@ -137,14 +143,21 @@ class MetadataService:
                         ROW_NUMBER() OVER (PARTITION BY id_cia, id_report ORDER BY last_exec DESC) as rn
                     FROM
                         METADATA_REPORT
-                ) mre ON sjl.report_id_cia = mre.id_cia
-                     AND sjl.report_id_report = mre.id_report
+                ) mre ON sjl.id_cia = mre.id_cia
+                     AND sjl.id_report = mre.id_report
                      AND mre.rn = 1
                 WHERE
                     sjl.event_type = 'job_added'
-                ORDER BY
-                    sjl.timestamp DESC
-            """)
+            """
+            
+            params = []
+            if id_cia != -1:
+                query += " AND sjl.id_cia = ?"
+                params.append(id_cia)
+                
+            query += " ORDER BY sjl.timestamp DESC"
+            
+            cursor.execute(query, params)
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
         except sqlite3.Error as e:

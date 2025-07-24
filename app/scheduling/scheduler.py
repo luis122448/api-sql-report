@@ -1,9 +1,10 @@
 import logging
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
-from configs.oracle import OracleTransaction, get_oracle_connection
+from configs.oracle import OracleTransaction, get_oracle_connection, DB_ORACLE_POOL_MAX
 from services.extract_service import ExtractService
 from services.minio_service import MinioService
 from services.metadata_service import MetadataService
@@ -21,21 +22,31 @@ metadata_service = MetadataService() # Instantiate MetadataService once
 minio_config_instance = MinioConfig()
 minio_service = MinioService(minio_config=minio_config_instance) # Pass the instance
 
-def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str, company: str):
+def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str, company: str, refreshtime: int):
     # Executes the extraction pipeline for a given report.
     # This function is called by the scheduler.
     job_id = f"report_{id_cia}_{id_report}"
     start_time = datetime.now()
     logger.info(f"SCHEDULER: Starting job {job_id} for report '{name}'.")
 
+    schedule_type = ""
+    if refreshtime > 999:
+        schedule_type = "Daily"
+    elif refreshtime >= 60:
+        schedule_type = "Hourly"
+    else:
+        schedule_type = "High-Frequency"
+
     metadata_service.log_scheduler_event(
         job_id=job_id, 
-        report_id_cia=id_cia, 
-        report_id_report=id_report, 
-        report_name=name, 
-        report_company=company,
+        id_cia=id_cia, 
+        id_report=id_report, 
+        name=name, 
+        company=company,
         event_type='job_started',
-        message=f"Starting extraction for Report ID: {id_report}"
+        message=f"Starting extraction for Report ID: {id_report}",
+        refresh_time=refreshtime,
+        schedule_type=schedule_type
     )
     
     try:
@@ -59,10 +70,10 @@ def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str,
         if result.status == 1:
             metadata_service.log_scheduler_event(
                 job_id=job_id, 
-                report_id_cia=id_cia, 
-                report_id_report=id_report, 
-                report_name=name, 
-                report_company=company,
+                id_cia=id_cia, 
+                id_report=id_report, 
+                name=name, 
+                company=company,
                 event_type='job_completed',
                 message=f"Extraction for Report ID: {id_report} completed successfully.",
                 duration_ms=duration_ms,
@@ -72,10 +83,10 @@ def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str,
         else:
             metadata_service.log_scheduler_event(
                 job_id=job_id, 
-                report_id_cia=id_cia, 
-                report_id_report=id_report, 
-                report_name=name, 
-                report_company=company,
+                id_cia=id_cia, 
+                id_report=id_report, 
+                name=name, 
+                company=company,
                 event_type='job_failed',
                 message=f"Extraction for Report ID: {id_report} failed: {result.log_message}",
                 duration_ms=duration_ms,
@@ -88,10 +99,10 @@ def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str,
         duration_ms = int((end_time - start_time).total_seconds() * 1000)
         metadata_service.log_scheduler_event(
             job_id=job_id, 
-            report_id_cia=id_cia, 
-            report_id_report=id_report, 
-            report_name=name, 
-            report_company=company,
+            id_cia=id_cia, 
+            id_report=id_report, 
+            name=name, 
+            company=company,
             event_type='job_failed',
             message=f"Unhandled error during scheduled extraction for Report ID: {id_report}: {e}",
             duration_ms=duration_ms,
@@ -128,6 +139,14 @@ def update_scheduled_jobs():
         job_id = f"report_{report.id_cia}_{report.id_report}"
         new_report_ids.add(job_id)
         
+        schedule_type = ""
+        if report.refreshtime > 999:
+            schedule_type = "Daily"
+        elif report.refreshtime >= 60:
+            schedule_type = "Hourly"
+        else:
+            schedule_type = "High-Frequency"
+
         if job_id in current_job_ids:
             # Check if job needs to be updated (e.g., refreshtime changed)
             existing_job = scheduler.get_job(job_id)
@@ -136,12 +155,14 @@ def update_scheduled_jobs():
             scheduler.remove_job(job_id)
             metadata_service.log_scheduler_event(
                 job_id=job_id, 
-                report_id_cia=report.id_cia, 
-                report_id_report=report.id_report, 
-                report_name=report.name, 
-                report_company=report.company, # Pass company here
+                id_cia=report.id_cia, 
+                id_report=report.id_report, 
+                name=report.name, 
+                company=report.company, # Pass company here
                 event_type='job_updated',
-                message=f"Job {job_id} updated due to configuration change."
+                message=f"Job {job_id} updated due to configuration change.",
+                refresh_time=report.refreshtime,
+                schedule_type=schedule_type
             )
             logger.info(f"Removed existing job {job_id} for update.")
 
@@ -151,20 +172,21 @@ def update_scheduled_jobs():
             scheduler.add_job(
                 run_scheduled_extraction,
                 trigger,
-                args=[report.id_cia, report.id_report, report.name, report.query, report.company], # Pass company here
+                args=[report.id_cia, report.id_report, report.name, report.query, report.company, report.refreshtime], # Pass company here
                 id=job_id,
                 name=f"Daily Report {report.name}",
                 replace_existing=True
             )
             metadata_service.log_scheduler_event(
                 job_id=job_id, 
-                report_id_cia=report.id_cia, 
-                report_id_report=report.id_report, 
-                report_name=report.name, 
-                report_company=report.company, # Pass company here
+                id_cia=report.id_cia, 
+                id_report=report.id_report, 
+                name=report.name, 
+                company=report.company, # Pass company here
                 event_type='job_added',
-                message="Scheduled daily job at 03:00 AM."
-                # next_run_time=added_job.next_run_time # Removed this line
+                message="Scheduled daily job at 03:00 AM.",
+                refresh_time=report.refreshtime,
+                schedule_type=schedule_type
             )
             logger.info(f"Scheduled daily job for Report ID: {report.id_report} (Name: {report.name}) at 03:00 AM.")
         else:
@@ -172,20 +194,21 @@ def update_scheduled_jobs():
             scheduler.add_job(
                 run_scheduled_extraction,
                 trigger,
-                args=[report.id_cia, report.id_report, report.name, report.query, report.company], # Pass company here
+                args=[report.id_cia, report.id_report, report.name, report.query, report.company, report.refreshtime], # Pass company here
                 id=job_id,
                 name=f"Interval Report {report.name}",
                 replace_existing=True
             )
             metadata_service.log_scheduler_event(
                 job_id=job_id, 
-                report_id_cia=report.id_cia, 
-                report_id_report=report.id_report, 
-                report_name=report.name, 
-                report_company=report.company, # Pass company here
+                id_cia=report.id_cia, 
+                id_report=report.id_report, 
+                name=report.name, 
+                company=report.company, # Pass company here
                 event_type='job_added',
-                message=f"Scheduled interval job every {report.refreshtime} minutes."
-                # next_run_time=added_job.next_run_time # Removed this line
+                message=f"Scheduled interval job every {report.refreshtime} minutes.",
+                refresh_time=report.refreshtime,
+                schedule_type=schedule_type
             )
             logger.info(f"Scheduled interval job for Report ID: {report.id_report} (Name: {report.name}) every {report.refreshtime} minutes.")
 
@@ -209,13 +232,19 @@ def start_scheduler():
     metadata_service.clear_scheduler_logs_on_startup()
     logger.info("Cleared SCHEDULED_JOBS_LOG on startup.")
 
-    # Cleanup and initial sequential execution of URGENT reports
-    logger.info("Starting cleanup and initial sequential execution of URGENT reports...")
+    # Cleanup and initial parallel execution of URGENT reports
+    logger.info("Starting cleanup and initial parallel execution of URGENT reports...")
     reports_to_run = metadata_service.cleanup_and_get_reports_to_reprocess(urgent_only=True)
-    for report in reports_to_run:
-        logger.info(f"Initial execution for URGENT report: {report.name}")
-        run_scheduled_extraction(report.id_cia, report.id_report, report.name, report.query, report.company)
-    logger.info("Initial sequential execution of URGENT reports finished.")
+    
+    with ThreadPoolExecutor(max_workers=DB_ORACLE_POOL_MAX) as executor:
+        futures = [executor.submit(run_scheduled_extraction, report.id_cia, report.id_report, report.name, report.query, report.company, report.refreshtime) for report in reports_to_run]
+        for future in futures:
+            try:
+                future.result()  # Wait for each task to complete
+            except Exception as e:
+                logger.error(f"Error during initial report execution: {e}")
+
+    logger.info("Initial parallel execution of URGENT reports finished.")
 
     # Schedule the initial load and subsequent updates
     scheduler.add_job(

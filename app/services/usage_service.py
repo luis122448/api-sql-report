@@ -18,13 +18,14 @@ class UsageService:
         finally:
             conn.close()
 
-    def get_top_reports(self) -> ApiResponseList:
+    def get_top_reports(self, id_cia: int = -1) -> ApiResponseList:
         response = ApiResponseList(status=1, message="Top reports retrieved successfully.")
         conn = get_db_connection()
         try:
             cursor = conn.cursor()
             one_week_ago = datetime.now() - timedelta(weeks=1)
-            cursor.execute("""
+            
+            query = """
                 SELECT 
                     id_cia, 
                     id_report, 
@@ -33,10 +34,20 @@ class UsageService:
                     AVG(processing_time_ms) as avg_processing_time_ms
                 FROM API_USAGE_LOG
                 WHERE timestamp >= ? AND endpoint LIKE '%/reports/last/%'
+            """
+            params = [one_week_ago]
+
+            if id_cia != -1:
+                query += " AND id_cia = ?"
+                params.append(id_cia)
+
+            query += """
                 GROUP BY id_cia, id_report
                 ORDER BY request_count DESC
                 LIMIT 20
-            """, (one_week_ago,))
+            """
+            
+            cursor.execute(query, params)
             rows = cursor.fetchall()
             response.list = [dict(row) for row in rows]
         except sqlite3.Error as e:

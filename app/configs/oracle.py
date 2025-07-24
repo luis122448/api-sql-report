@@ -13,6 +13,27 @@ load_dotenv()
 DB_ORACLE_USER = os.getenv("DB_ORACLE_USER")
 DB_ORACLE_PASSWORD = os.getenv("DB_ORACLE_PASSWORD")
 DB_ORACLE_DSN = os.getenv("DB_ORACLE_DSN")
+DB_ORACLE_POOL_MIN = int(os.getenv("DB_ORACLE_POOL_MIN", 2))
+DB_ORACLE_POOL_MAX = int(os.getenv("DB_ORACLE_POOL_MAX", 5))
+DB_ORACLE_POOL_INCREMENT = int(os.getenv("DB_ORACLE_POOL_INCREMENT", 1))
+
+pool = None
+
+def init_oracle_pool():
+    global pool
+    try:
+        pool = oracledb.create_pool(
+            user=DB_ORACLE_USER,
+            password=DB_ORACLE_PASSWORD,
+            dsn=DB_ORACLE_DSN,
+            min=DB_ORACLE_POOL_MIN,
+            max=DB_ORACLE_POOL_MAX,
+            increment=DB_ORACLE_POOL_INCREMENT
+        )
+        logger.info("Oracle connection pool created successfully.")
+    except oracledb.Error as e:
+        logger.error(f"Error creating Oracle connection pool: {e}")
+        raise
 
 # Define operating system ( Windows or Linux )
 if os.name == 'nt':
@@ -26,26 +47,17 @@ else:
     instant_client_path = os.path.join(BASEDIR, "oracle_home", "instantclient")
     oracledb.init_oracle_client(lib_dir=instant_client_path)
 
+init_oracle_pool()
 
 def get_oracle_connection():
+    global pool
+    if pool is None:
+        init_oracle_pool()
     try:
-        oracle_warehouse_connection = oracledb.connect(
-            user=DB_ORACLE_USER,
-            password=DB_ORACLE_PASSWORD,
-            dsn=DB_ORACLE_DSN,
-            disable_oob=True
-        )
-        return oracle_warehouse_connection
-    except oracledb.DatabaseError as e:
-        logger.error("Error de base de datos durante la conexión: %s", e)
-        raise
+        return pool.acquire()
     except oracledb.Error as e:
-        logger.error("Error de Oracle durante la conexión: %s", e)
+        logger.error(f"Error acquiring Oracle connection from pool: {e}")
         raise
-    except Exception as e:
-        logger.error("Error genérico durante la conexión: %s", e)
-        raise
-
 
 def get_reconnect_oracle(oracle_connection):
     try:
@@ -87,11 +99,12 @@ def testing_oracle_connection(oracle_connection) -> bool:
 
 class OracleTransaction:
     def __init__(self):
-        self.connection = get_oracle_connection()
+        self.connection = None
 
     def __enter__(self):
-        self.connection = get_reconnect_oracle(self.connection)
+        self.connection = get_oracle_connection()
         return self.connection
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.connection.close()
+        if self.connection:
+            self.connection.close()

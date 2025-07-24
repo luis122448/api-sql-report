@@ -38,28 +38,31 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_id_cia_id_report ON METADATA_REPORT (id_cia, id_report)
         """)
         
+        cursor.execute("""DROP TABLE SCHEDULED_JOBS_LOG""")
         # Create SCHEDULED_JOBS_LOG table (no changes needed here, but ensure it exists)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS SCHEDULED_JOBS_LOG (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 job_id TEXT NOT NULL,
-                report_id_cia INTEGER,
-                report_id_report INTEGER,
-                report_name TEXT,
-                report_company TEXT, 
+                id_cia INTEGER,
+                id_report INTEGER,
+                name TEXT,
+                company TEXT, 
                 event_type TEXT NOT NULL,
                 timestamp TIMESTAMP NOT NULL,
                 message TEXT,
                 next_run_time TIMESTAMP,
                 duration_ms INTEGER,
-                status TEXT
+                status TEXT,
+                refresh_time INTEGER,
+                schedule_type TEXT
             )
         """)
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_job_id ON SCHEDULED_JOBS_LOG (job_id)
         """)
         cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_report_ids ON SCHEDULED_JOBS_LOG (report_id_cia, report_id_report)
+            CREATE INDEX IF NOT EXISTS idx_report_ids ON SCHEDULED_JOBS_LOG (id_cia, id_report)
         """)
 
         # Create API_USAGE_LOG table
