@@ -53,15 +53,15 @@ async def get_last_report(
         return JSONResponse(content={"status":1.2, "message":f"Endpoint error: {str(e)}", "log_user": token.coduser}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     finally:
         processing_time_ms = int((time.time() - start_time) * 1000)
-        usage_service.log_api_request(
-            id_cia=token.id_cia,
-            id_report=id_report,
-            requester_ip=request.client.host,
-            endpoint=request.url.path,
-            user_agent=request.headers.get("user-agent"),
-            token_coduser=token.coduser,
-            processing_time_ms=processing_time_ms
-        )
+        # usage_service.log_api_request(
+        #     id_cia=token.id_cia,
+        #     id_report=id_report,
+        #     requester_ip=request.client.host,
+        #     endpoint=request.url.path,
+        #     user_agent=request.headers.get("user-agent"),
+        #     token_coduser=token.coduser,
+        #     processing_time_ms=processing_time_ms
+        # )
 
 @router.get("/reports/specified/{file_name}", dependencies=[Depends(JWTBearer())])
 @limiter.limit("6/minute")
