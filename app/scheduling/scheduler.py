@@ -59,7 +59,6 @@ def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str,
         
         extract_service = ExtractService(
             oracle=oracle_transaction, 
-            minio_service=minio_service, 
             metadata_service=metadata_service
         )
         

@@ -230,7 +230,7 @@ class MetadataService:
             reports_to_reprocess = []
 
             # Filter for urgent reports if requested
-            reports_to_check = [r for r in all_reports if r.refreshtime <= 120] if urgent_only else all_reports
+            reports_to_check = [r for r in all_reports if r.refreshtime <= 30] if urgent_only else all_reports
 
             for report in reports_to_check:
                 # 3. Check for the latest successful execution of the report
