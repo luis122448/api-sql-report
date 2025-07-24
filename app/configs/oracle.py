@@ -99,10 +99,9 @@ def testing_oracle_connection(oracle_connection) -> bool:
 
 class OracleTransaction:
     def __init__(self):
-        self.connection = None
+        self.connection = get_oracle_connection()
 
     def __enter__(self):
-        self.connection = get_oracle_connection()
         return self.connection
 
     def __exit__(self, exc_type, exc_value, traceback):
