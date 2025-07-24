@@ -8,16 +8,16 @@ from configs.oracle import OracleTransaction
 from fastapi import Depends
 from services.minio_service import MinioService
 from services.metadata_service import MetadataService
+from configs.minio import MinioConfig
 
 
 class ExtractService:
 
     def __init__(self, 
                  oracle: OracleTransaction = Depends(), 
-                 minio_service: MinioService = Depends(),
                  metadata_service: MetadataService = Depends()) -> None:
         self.oracle = oracle
-        self.minio_service = minio_service
+        self.minio_service = MinioService(minio_config=MinioConfig())
         self.metadata_service = metadata_service
         self.oracle_connection = oracle.connection
         self.oracle_cursor = oracle.connection.cursor()
