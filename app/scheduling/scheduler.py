@@ -66,7 +66,7 @@ def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str,
         logger.info(f"SCHEDULER: Running extraction pipeline for job {job_id}.")
         result = extract_service.run_extraction_pipeline(id_cia, id_report, name, query, company)
         
-        end_time = datetime.now()
+        end_time = datetime.now(peru_tz)
         duration_ms = int((end_time - start_time).total_seconds() * 1000)
 
         if result.status == 1:
@@ -97,7 +97,7 @@ def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str,
             logger.error(f"SCHEDULER: Job {job_id} failed during pipeline execution: {result.log_message}")
 
     except Exception as e:
-        end_time = datetime.now()
+        end_time = datetime.now(peru_tz)
         duration_ms = int((end_time - start_time).total_seconds() * 1000)
         metadata_service.log_scheduler_event(
             job_id=job_id, 
