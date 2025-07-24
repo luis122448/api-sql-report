@@ -16,7 +16,7 @@ app.docs_url = "/docs"
 origins = ["*"] 
 
 # Add middleware
-# app.add_middleware(ExceptionHandlerMiddleware)
+app.add_middleware(ExceptionHandlerMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -26,7 +26,7 @@ app.add_middleware(
 )
 
 # Exception Handler
-# app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 
 app.include_router(extract_router.router, prefix="/api")
 app.include_router(metadata_router.router, prefix="/api")
