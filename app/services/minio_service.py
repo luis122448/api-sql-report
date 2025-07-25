@@ -37,10 +37,10 @@ class MinioService:
             logging.error(f"Error uploading file: {exc}")
             raise
 
-    def download_file(self, bucket_name: str, object_name: str):
+    def download_file(self, bucket_name: str, object_name: str) -> bytes | None:
         try:
             response = self.minio_client.get_object(bucket_name, object_name)
-            yield from response.stream(32 * 1024)
+            return response.read()
         except S3Error as exc:
             logging.error(f"Error downloading file: {exc}")
             return None
@@ -48,6 +48,19 @@ class MinioService:
             if 'response' in locals() and response:
                 response.close()
                 response.release_conn()
+
+    def generate_presigned_url(self, bucket_name: str, object_name: str, expires_in: int = 300) -> str | None:
+        try:
+            # Generate a presigned URL for the object, expiring in `expires_in` seconds.
+            url = self.minio_client.presigned_get_object(
+                bucket_name,
+                object_name,
+                expires=timedelta(seconds=expires_in)
+            )
+            return url
+        except S3Error as exc:
+            logging.error(f"Error generating presigned URL: {exc}")
+            return None
 
     def clean_old_minio_objects(self, bucket_name: str = "reports"):
         # Deletes objects from the specified Minio bucket that are older than one week.

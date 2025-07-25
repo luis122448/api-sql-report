@@ -1,7 +1,7 @@
 import time
 from datetime import datetime
 from fastapi import APIRouter, Depends, Response, status, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.encoders import jsonable_encoder
 from services.extract_service import ExtractService
 from services.metadata_service import MetadataService
@@ -35,20 +35,19 @@ async def get_last_report(
             return JSONResponse(content=jsonable_encoder(error_response), status_code=status.HTTP_404_NOT_FOUND)
 
         file_name = metadata_entry["object_name"]
-        last_etl_exec_str = metadata_entry["last_exec"]
-        last_etl_exec = datetime.fromisoformat(last_etl_exec_str)
 
-        parquet_data = extract_service.minio_service.download_file(bucket_name="reports", object_name=file_name)
+        # Generate a presigned URL for the file
+        presigned_url = extract_service.minio_service.generate_presigned_url(
+            bucket_name="reports", 
+            object_name=file_name
+        )
 
-        if not parquet_data:
-            error_response = { "status": 1.1, "message": "Parquet file not found in Minio or could not be downloaded.", "log_user": token.coduser }
-            return JSONResponse(content=jsonable_encoder(error_response), status_code=status.HTTP_404_NOT_FOUND)
+        if not presigned_url:
+            error_response = { "status": 1.1, "message": "Could not generate a presigned URL for the report.", "log_user": token.coduser }
+            return JSONResponse(content=jsonable_encoder(error_response), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        headers = {"X-Log-User": token.coduser, "X-Days-To-Token-Expire": str(token.days_to_token_expire)}
-        if last_etl_exec:
-            headers["X-Last-Etl-Exec"] = last_etl_exec.isoformat()
-
-        return StreamingResponse(content=parquet_data, media_type="application/vnd.apache.parquet", headers=headers)
+        # Redirect the client to the presigned URL
+        return RedirectResponse(url=presigned_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
     except Exception as e:
         return JSONResponse(content={"status":1.2, "message":f"Endpoint error: {str(e)}", "log_user": token.coduser}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     finally:
@@ -82,16 +81,18 @@ async def get_specified_report(
             error_response = { "status": 1.1, "message": "Metadata not found for the given id_cia and file_name.", "log_user": token.coduser }
             return JSONResponse(content=jsonable_encoder(error_response), status_code=status.HTTP_404_NOT_FOUND)
 
-        last_etl_exec_str = metadata_entry["last_exec"]
-        last_etl_exec = datetime.fromisoformat(last_etl_exec_str)
+        # Generate a presigned URL for the file
+        presigned_url = extract_service.minio_service.generate_presigned_url(
+            bucket_name="reports", 
+            object_name=file_name
+        )
 
-        parquet_data = extract_service.minio_service.download_file(bucket_name="reports", object_name=file_name)
+        if not presigned_url:
+            error_response = { "status": 1.1, "message": "Could not generate a presigned URL for the report.", "log_user": token.coduser }
+            return JSONResponse(content=jsonable_encoder(error_response), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        headers = {"X-Log-User": token.coduser, "X-Days-To-Token-Expire": str(token.days_to_token_expire)}
-        if last_etl_exec:
-            headers["X-Last-Etl-Exec"] = last_etl_exec.isoformat()
-
-        return StreamingResponse(content=parquet_data, media_type="application/vnd.apache.parquet", headers=headers)
+        # Redirect the client to the presigned URL
+        return RedirectResponse(url=presigned_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
     except Exception as e:
         return JSONResponse(content={"status":1.2, "message":f"Endpoint error: {str(e)}", "log_user": token.coduser}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     finally:
