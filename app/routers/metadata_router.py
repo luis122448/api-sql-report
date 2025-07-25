@@ -14,7 +14,7 @@ async def get_total_scheduled_reports(metadata_service: MetadataService = Depend
     reports = metadata_service.get_total_scheduled_reports_metadata()
     return ApiResponseList(status=1, message="OK", list=reports)
 
-@router.get("/dashboard/weekly_execution_details", response_model=ApiResponseList)
+@router.get("/dashboard/last_execution_details", response_model=ApiResponseList)
 async def get_weekly_report_execution_details(id_cia: int = -1, metadata_service: MetadataService = Depends()):
     executions = metadata_service.get_weekly_report_execution_details_metadata(id_cia)
     return ApiResponseList(status=1, message="OK", list=executions)

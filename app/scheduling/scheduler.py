@@ -214,6 +214,19 @@ def update_scheduled_jobs():
             )
             logger.info(f"Scheduled interval job for Report ID: {report.id_report} (Name: {report.name}) every {report.refreshtime} minutes.")
 
+        # Add job to the database
+        metadata_service.add_scheduled_job(
+            job_id=job_id,
+            id_cia=report.id_cia,
+            id_report=report.id_report,
+            name=report.name,
+            company=report.company,
+            event_type='job_added',
+            refresh_time=report.refreshtime,
+            schedule_type=schedule_type,
+            schedule_date=datetime.now(peru_tz)
+        )
+
     # Remove jobs that are no longer in the Oracle configuration
     jobs_to_remove = current_job_ids - new_report_ids
     for job_id in jobs_to_remove:

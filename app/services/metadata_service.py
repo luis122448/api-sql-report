@@ -142,22 +142,20 @@ class MetadataService:
             
             query = """
                 SELECT
-                    sjl.job_id,
-                    sjl.id_cia,
-                    sjl.id_report,
-                    sjl.name,
-                    sjl.company,
-                    sjl.event_type,
-                    sjl.timestamp,
-                    sjl.message,
-                    sjl.next_run_time,
-                    sjl.refresh_time,
-                    sjl.schedule_type,
+                    sj.job_id,
+                    sj.id_cia,
+                    sj.id_report,
+                    sj.name,
+                    sj.company,
+                    sj.event_type,
+                    sj.refresh_time,
+                    sj.schedule_type,
+                    sj.schedule_date,
                     mre.processing_time_ms AS last_execution_duration_ms,
                     mre.status AS last_execution_status,
                     mre.last_exec AS last_execution_time
                 FROM
-                    SCHEDULED_JOBS_LOG sjl
+                    SCHEDULED_JOBS sj
                 LEFT JOIN (
                     SELECT
                         id_cia,
@@ -168,19 +166,17 @@ class MetadataService:
                         ROW_NUMBER() OVER (PARTITION BY id_cia, id_report ORDER BY last_exec DESC) as rn
                     FROM
                         METADATA_REPORT
-                ) mre ON sjl.id_cia = mre.id_cia
-                     AND sjl.id_report = mre.id_report
+                ) mre ON sj.id_cia = mre.id_cia
+                     AND sj.id_report = mre.id_report
                      AND mre.rn = 1
-                WHERE
-                    sjl.event_type = 'job_added'
             """
             
             params = []
             if id_cia != -1:
-                query += " AND sjl.id_cia = ?"
+                query += " AND sj.id_cia = ?"
                 params.append(id_cia)
                 
-            query += " ORDER BY sjl.timestamp DESC"
+            query += " ORDER BY sj.schedule_date DESC"
             
             cursor.execute(query, params)
             rows = cursor.fetchall()
@@ -278,3 +274,23 @@ class MetadataService:
             logger.error(f"Error clearing scheduler logs on startup: {e}")
         finally:
             conn.close()
+
+    def add_scheduled_job(self, job_id, id_cia, id_report, name, company, event_type, refresh_time, schedule_type, schedule_date):
+        # Adds a new scheduled job to the SCHEDULED_JOBS table.
+        try:
+            conn = get_db_connection()
+            if not conn:
+                raise sqlite3.Error("Failed to get database connection.")
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                INSERT INTO SCHEDULED_JOBS (job_id, id_cia, id_report, name, company, event_type, refresh_time, schedule_type, schedule_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (job_id, id_cia, id_report, name, company, event_type, refresh_time, schedule_type, schedule_date))
+            
+            conn.commit()
+            conn.close()
+            logger.info(f"Scheduled job {job_id} added successfully.")
+        except sqlite3.Error as e:
+            logger.error(f"Failed to add scheduled job {job_id}: {e}")
+            raise

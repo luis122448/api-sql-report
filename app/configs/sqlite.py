@@ -71,6 +71,22 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_report_ids ON SCHEDULED_JOBS_LOG (id_cia, id_report)
         """)
 
+        cursor.execute("""DROP TABLE IF EXISTS SCHEDULED_JOBS""")
+        # Create SCHEDULED_JOBS table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS SCHEDULED_JOBS (
+                job_id TEXT PRIMARY KEY NOT NULL,
+                id_cia INTEGER,
+                id_report INTEGER,
+                name TEXT,
+                company TEXT, 
+                event_type TEXT NOT NULL,
+                refresh_time INTEGER,
+                schedule_type TEXT,
+                schedule_date TIMESTAMP NOT NULL
+            )
+        """)
+
         # Create API_USAGE_LOG table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS API_USAGE_LOG (
