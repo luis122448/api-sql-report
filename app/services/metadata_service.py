@@ -169,6 +169,8 @@ class MetadataService:
                 ) mre ON sj.id_cia = mre.id_cia
                      AND sj.id_report = mre.id_report
                      AND mre.rn = 1
+                WHERE
+                    0 = 0
             """
             
             params = []
@@ -294,3 +296,42 @@ class MetadataService:
         except sqlite3.Error as e:
             logger.error(f"Failed to add scheduled job {job_id}: {e}")
             raise
+
+    def get_executions_by_report(self, id_cia, id_report) -> list[dict[str, Any]]:
+        """Returns a list of all report executions, ordered by id_cia and id_report DESC."""
+        conn = get_db_connection()
+        if not conn:
+            logger.error("Failed to connect to the database.")
+            return []
+        try:
+            params = []
+            params.append(id_cia)
+            params.append(id_report)
+            
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT
+                    id_cia,
+                    id_report,
+                    name,
+                    cadsql,
+                    object_name,
+                    last_exec,
+                    processing_time_ms,
+                    status,
+                    error_message
+                FROM
+                    METADATA_REPORT
+                WHERE
+                    id_cia = ?
+                    AND id_report = ?
+                ORDER BY
+                    last_exec DESC
+            """,params)
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+        except sqlite3.Error as e:
+            logger.error(f"Error retrieving all executions: {e}")
+            return []
+        finally:
+            conn.close()

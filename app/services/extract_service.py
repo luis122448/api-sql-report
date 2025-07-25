@@ -29,44 +29,37 @@ class ExtractService:
         object_name = None
         last_exec = None
         decoded_query = None
+        processing_time_ms = None
 
         try:
             # Step 1: Decode the Oracle query
             decode_response = ExtractService.decode_query(id_cia, query)
             if decode_response.status != 1:
-                pipeline_status = 'FAILED'
-                pipeline_error_message = decode_response.log_message
-                return decode_response # Early exit if decode fails
+                raise Exception(decode_response.log_message)
             decoded_query = decode_response.object
             
             # Step 2: Retrieve data using the decoded query
             data_response = self.get_data(decoded_query)
             if data_response.status != 1:
-                pipeline_status = 'FAILED'
-                pipeline_error_message = data_response.log_message
                 last_exec = data_response.last_exec # Still log the time of attempt
-                return data_response # Early exit if data retrieval fails
+                raise Exception(data_response.log_message)
             last_exec = data_response.last_exec
 
             # Step 3: If data retrieval was successful, convert to Parquet
             file_path_response = self.to_parquet(data_response.list)
             if file_path_response.status != 1:
-                pipeline_status = 'FAILED'
-                pipeline_error_message = file_path_response.log_message
-                return file_path_response # Early exit if parquet conversion fails
+                raise Exception(file_path_response.log_message)
 
             # Step 4: Upload the Parquet file to Minio
             upload_response = self.upload_to_minio(file_path_response.object)
             if upload_response.status != 1:
-                pipeline_status = 'FAILED'
-                pipeline_error_message = upload_response.log_message
-                return upload_response # Early exit if upload fails
+                raise Exception(upload_response.log_message)
             object_name = upload_response.object["file_name"]
 
         except Exception as e:
             pipeline_status = 'FAILED'
             pipeline_error_message = f"Unhandled exception during pipeline: {e}"
-            # No early exit here, proceed to log metadata
+
         finally:
             end_pipeline_time = datetime.now()
             processing_time_ms = int((end_pipeline_time - start_pipeline_time).total_seconds() * 1000)
@@ -83,8 +76,7 @@ class ExtractService:
                 status=pipeline_status,
                 error_message=pipeline_error_message
             )
-            # If the pipeline failed at an early stage, the initial return would have already happened.
-            # This final return ensures a consistent ApiResponseObject is always returned.
+            
             if pipeline_status == 'OK':
                 return ApiResponseObject(status=1, message="Pipeline completed successfully.", log_message="OK!")
             else:

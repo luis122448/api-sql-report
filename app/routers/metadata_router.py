@@ -23,3 +23,8 @@ async def get_weekly_report_execution_details(id_cia: int = -1, metadata_service
 async def get_reports_status(report_config_manager: ReportConfigManager = Depends(ReportConfigManager)):
     status_service = StatusService(report_config_manager)
     return status_service.get_report_status()
+
+@router.get("/dashboard/executions_by_report", response_model=ApiResponseList)
+async def get_executions_by_report(id_cia: int, id_report: int, metadata_service: MetadataService = Depends()):
+    executions = metadata_service.get_executions_by_report(id_cia, id_report)
+    return ApiResponseList(status=1, message="OK", list=executions)
