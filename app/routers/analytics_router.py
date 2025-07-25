@@ -1,7 +1,7 @@
 import time
 from datetime import datetime
 from fastapi import APIRouter, Depends, Response, status, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 from services.extract_service import ExtractService
 from services.metadata_service import MetadataService
@@ -48,7 +48,7 @@ async def get_last_report(
         if last_etl_exec:
             headers["X-Last-Etl-Exec"] = last_etl_exec.isoformat()
 
-        return Response(content=parquet_data, media_type="application/vnd.apache.parquet", headers=headers)
+        return StreamingResponse(content=parquet_data, media_type="application/vnd.apache.parquet", headers=headers)
     except Exception as e:
         return JSONResponse(content={"status":1.2, "message":f"Endpoint error: {str(e)}", "log_user": token.coduser}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     finally:
@@ -85,20 +85,13 @@ async def get_specified_report(
         last_etl_exec_str = metadata_entry["last_exec"]
         last_etl_exec = datetime.fromisoformat(last_etl_exec_str)
 
-        parquet_data, error_details = extract_service.minio_service.download_file(bucket_name="reports", object_name=file_name)
-
-        if error_details:
-            return JSONResponse(content=jsonable_encoder(error_details), status_code=error_details.get("status_code", status.HTTP_400_BAD_REQUEST))
-        
-        if not parquet_data:
-            error_response = { "status": 1.1, "message": "Parquet file not found in Minio or could not be downloaded.", "log_user": token.coduser }
-            return JSONResponse(content=jsonable_encoder(error_response), status_code=status.HTTP_404_NOT_FOUND)
+        parquet_data = extract_service.minio_service.download_file(bucket_name="reports", object_name=file_name)
 
         headers = {"X-Log-User": token.coduser, "X-Days-To-Token-Expire": str(token.days_to_token_expire)}
         if last_etl_exec:
             headers["X-Last-Etl-Exec"] = last_etl_exec.isoformat()
 
-        return Response(content=parquet_data, media_type="application/vnd.apache.parquet", headers=headers)
+        return StreamingResponse(content=parquet_data, media_type="application/vnd.apache.parquet", headers=headers)
     except Exception as e:
         return JSONResponse(content={"status":1.2, "message":f"Endpoint error: {str(e)}", "log_user": token.coduser}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     finally:

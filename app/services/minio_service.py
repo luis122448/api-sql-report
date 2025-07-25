@@ -37,10 +37,10 @@ class MinioService:
             logging.error(f"Error uploading file: {exc}")
             raise
 
-    def download_file(self, bucket_name: str, object_name: str) -> bytes | None:
+    def download_file(self, bucket_name: str, object_name: str):
         try:
             response = self.minio_client.get_object(bucket_name, object_name)
-            return response.read()
+            yield from response.stream(32 * 1024)
         except S3Error as exc:
             logging.error(f"Error downloading file: {exc}")
             return None
