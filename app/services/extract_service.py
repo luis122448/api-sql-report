@@ -198,31 +198,30 @@ class ExtractService:
                 oracledb.DB_TYPE_CLOB: 'string',
             }
 
-            # Step 1: Build the dtype map for all columns based on metadata.
-            dtype_map = {}
+            # Phase 1: Attempt ideal data typing based on database metadata.
             for i, col_name in enumerate(column_names):
                 oracle_type_code = columns_description[i][1]
+                target_type = None
                 if oracle_type_code == oracledb.DB_TYPE_NUMBER:
                     scale = columns_description[i][5]
-                    if scale is not None and scale == 0:
-                        dtype_map[col_name] = 'Int64'
-                    else:
-                        dtype_map[col_name] = 'float64'
+                    target_type = 'Int64' if scale is not None and scale == 0 else 'float64'
                 else:
-                    pd_type = type_mapping.get(oracle_type_code)
-                    if pd_type:
-                        dtype_map[col_name] = pd_type
-            
-            # Step 2: Apply the initial type conversions.
-            if dtype_map:
-                df = df.astype(dtype_map, copy=False)
+                    target_type = type_mapping.get(oracle_type_code)
+                
+                if target_type:
+                    try:
+                        # Apply the ideal type.
+                        df[col_name] = df[col_name].astype(target_type)
+                    except (ValueError, TypeError):
+                        # If conversion fails (e.g., mixed data), fallback to string.
+                        df[col_name] = df[col_name].astype('string')
 
-            # Step 3: Post-process columns that are effectively empty (all nulls or empty strings).
+            # Phase 2: Final cleanup. Aggressively replace any column that is still empty.
             for col_name in df.columns:
-                # This check robustly handles columns with any mix of None, NaN, and empty strings.
-                if df[col_name].fillna('').eq('').all():
-                    df[col_name] = 'N/A'  # Assigning a scalar fills the entire column
-                    df[col_name] = df[col_name].astype('string')
+                # This robustly checks for columns containing only nulls or empty strings.
+                if df[col_name].astype(str).fillna('').eq('').all():
+                    # Replace the entire column with 'N/A' and ensure it's a string type.
+                    df[col_name] = pd.Series(['N/A'] * len(df), index=df.index, dtype='string')
 
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
             file_name = f"report_{timestamp}.parquet"
