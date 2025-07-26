@@ -47,8 +47,7 @@ class ApiResponseList(BaseModel):
     message: str
     log_message: Optional[str] = None
     log_user: Optional[str] = None
-    last_exec: Optional[datetime] = None
-    list: Optional[List[Dict[str, Any]]] = None
+    list: Optional[List] = None
 
 
 class ApiResponseAuth(BaseModel):

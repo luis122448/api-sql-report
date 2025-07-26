@@ -1,6 +1,4 @@
 from fastapi import APIRouter, Depends, Request
-
-
 from services.extract_service import ExtractService
 from schemas.api_response_schema import ApiResponseObject
 from pydantic import BaseModel
@@ -31,6 +29,3 @@ def extract_data(
         query=extraction_request.query
     )
     return response
-
-
-

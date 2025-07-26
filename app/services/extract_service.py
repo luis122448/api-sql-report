@@ -46,7 +46,7 @@ class ExtractService:
             last_exec = data_response.last_exec
 
             # Step 3: If data retrieval was successful, convert to Parquet
-            file_path_response = self.to_parquet(data_response.list)
+            file_path_response = self.to_parquet(data_response.list, data_response.object)
             if file_path_response.status != 1:
                 raise Exception(file_path_response.log_message)
 
@@ -162,11 +162,12 @@ class ExtractService:
             self.oracle_cursor.execute(query)
             rows = self.oracle_cursor.fetchall()
 
-            # Get columns
+            # Get columns and result
             columns = [col[0] for col in self.oracle_cursor.description]
             result = [dict(zip(columns, row)) for row in rows]
 
             object_response.list = result
+            object_response.object = self.oracle_cursor.description
 
         except oracledb.Error as e:
             object_response.status = 1.2
@@ -179,7 +180,7 @@ class ExtractService:
         finally:
             return object_response
 
-    def to_parquet(self, data_list: list) -> ApiResponseObject:
+    def to_parquet(self, data_list: list, columns_description: list) -> ApiResponseObject:
         object_response = ApiResponseObject(
             status=1, message="Data converted to Parquet file successfully.", log_message="OK!")
         try:
@@ -191,6 +192,25 @@ class ExtractService:
 
             # Create a pandas DataFrame
             df = pd.DataFrame(data_list)
+
+            # DataType Mapping from Oracle to Pandas
+            type_mapping = {
+                oracledb.DB_TYPE_VARCHAR: 'object',
+                oracledb.DB_TYPE_CHAR: 'object',
+                oracledb.DB_TYPE_LONG: 'object',
+                oracledb.DB_TYPE_NUMBER: 'float64',
+                oracledb.DB_TYPE_DATE: 'datetime64[ns]',
+                oracledb.DB_TYPE_TIMESTAMP: 'datetime64[ns]',
+                oracledb.DB_TYPE_CLOB: 'object',
+            }
+
+            for i, col_name in enumerate(df.columns):
+                # Check if the column is entirely null or empty
+                if df[col_name].isnull().all():
+                    oracle_type = columns_description[i][1]
+                    pd_type = type_mapping.get(oracle_type)
+                    if pd_type:
+                        df[col_name] = df[col_name].astype(pd_type)
 
             # Generate a unique filename
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
