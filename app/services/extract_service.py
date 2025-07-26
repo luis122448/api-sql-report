@@ -189,7 +189,6 @@ class ExtractService:
             df = pd.DataFrame(data_rows, columns=column_names)
 
             # DataType Mapping from Oracle to Pandas
-            # Using modern pandas dtypes ('string', 'Int64') for better type handling and null support.
             type_mapping = {
                 oracledb.DB_TYPE_VARCHAR: 'string',
                 oracledb.DB_TYPE_CHAR: 'string',
@@ -202,16 +201,18 @@ class ExtractService:
 
             dtype_map = {}
             for i, col_name in enumerate(column_names):
+                # If a column is entirely null, fill with 'N/A' and set type to string.
+                if df[col_name].isnull().all():
+                    df[col_name] = df[col_name].fillna('N/A')
+                    dtype_map[col_name] = 'string'
+                    continue
+
                 oracle_type_code = columns_description[i][1]
                 
                 if oracle_type_code == oracledb.DB_TYPE_NUMBER:
-                    precision = columns_description[i][4]
                     scale = columns_description[i][5]
-                    
-                    # If scale is 0, it's an integer. Use pandas' nullable integer type.
                     if scale is not None and scale == 0:
                         dtype_map[col_name] = 'Int64'
-                    # Otherwise, it's a decimal/float.
                     else:
                         dtype_map[col_name] = 'float64'
                 else:
@@ -219,17 +220,13 @@ class ExtractService:
                     if pd_type:
                         dtype_map[col_name] = pd_type
             
-            # Apply the explicit dtypes to the DataFrame.
-            # This ensures all columns have a defined type, even if they are all null.
             if dtype_map:
                 df = df.astype(dtype_map, copy=False)
 
-            # Generate a unique filename
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
             file_name = f"report_{timestamp}.parquet"
             file_path = f"/tmp/{file_name}"
 
-            # Convert the DataFrame to a Parquet file
             df.to_parquet(file_path, engine='pyarrow', index=False)
             object_response.object = file_path
 
