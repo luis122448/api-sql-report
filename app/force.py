@@ -9,16 +9,18 @@ from configs.oracle import DB_ORACLE_POOL_MAX
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def force_reprocess_all_reports():
+def force_reprocess_reports():
     """
-    Forces the reprocessing of all reports by leveraging the existing
+    Forces the reprocessing of reports that need it by leveraging the existing
     cleanup_and_get_reports_to_reprocess logic from the MetadataService.
+    This script is thread-safe.
     """
-    logger.info("Starting forced reprocessing of ALL reports.")
+    logger.info("Starting forced reprocessing of reports.")
     
+    # Instantiate MetadataService locally to ensure thread safety.
     metadata_service = MetadataService()
     
-    # Get all reports that need reprocessing, not just urgent ones.
+    # Get all reports that need reprocessing.
     reports_to_reprocess = metadata_service.cleanup_and_get_reports_to_reprocess(urgent_only=False)
     
     if not reports_to_reprocess:
@@ -27,7 +29,7 @@ def force_reprocess_all_reports():
 
     logger.info(f"Found {len(reports_to_reprocess)} reports to reprocess. Starting parallel execution...")
 
-    # Use a ThreadPoolExecutor to run extractions in parallel, similar to the scheduler startup.
+    # Use a ThreadPoolExecutor to run extractions in parallel.
     with ThreadPoolExecutor(max_workers=DB_ORACLE_POOL_MAX) as executor:
         futures = [
             executor.submit(
@@ -48,7 +50,7 @@ def force_reprocess_all_reports():
             except Exception as e:
                 logger.error(f"An error occurred during a report reprocessing task: {e}", exc_info=True)
 
-    logger.info("Forced reprocessing of all reports has been completed.")
+    logger.info("Forced reprocessing of reports has been completed.")
 
 if __name__ == "__main__":
-    force_reprocess_all_reports()
+    force_reprocess_reports()
