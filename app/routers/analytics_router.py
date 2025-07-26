@@ -46,8 +46,8 @@ async def get_last_report(
             error_response = { "status": 1.1, "message": "Could not generate a presigned URL for the report.", "log_user": token.coduser }
             return JSONResponse(content=jsonable_encoder(error_response), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Return the presigned URL in a JSON response
-        return JSONResponse(content={"status": 1, "url": presigned_url, "log_user": token.coduser})
+        # Redirect the client to the presigned URL
+        return RedirectResponse(url=presigned_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
     except Exception as e:
         return JSONResponse(content={"status":1.2, "message":f"Endpoint error: {str(e)}", "log_user": token.coduser}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     finally:
@@ -91,8 +91,8 @@ async def get_specified_report(
             error_response = { "status": 1.1, "message": "Could not generate a presigned URL for the report.", "log_user": token.coduser }
             return JSONResponse(content=jsonable_encoder(error_response), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Return the presigned URL in a JSON response
-        return JSONResponse(content={"status": 1, "url": presigned_url, "log_user": token.coduser})
+        # Redirect the client to the presigned URL
+        return RedirectResponse(url=presigned_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
     except Exception as e:
         return JSONResponse(content={"status":1.2, "message":f"Endpoint error: {str(e)}", "log_user": token.coduser}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     finally:
