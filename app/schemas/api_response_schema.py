@@ -30,6 +30,7 @@ class ApiResponseObject(BaseModel):
     log_message: Optional[str] = None
     log_user: Optional[str] = None
     object: Optional[Any] = None
+    last_exec: Optional[str] = None
 
     model_config = {
         "json_schema_extra": {
@@ -48,6 +49,17 @@ class ApiResponseList(BaseModel):
     log_message: Optional[str] = None
     log_user: Optional[str] = None
     list: Optional[List] = None
+    last_exec: Optional[str] = None
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{
+                "status": 1.2,
+                "message": "Error Unauthorized",
+                "list": []
+            }]
+        }
+    }
 
 
 class ApiResponseAuth(BaseModel):
