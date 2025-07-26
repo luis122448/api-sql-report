@@ -188,7 +188,6 @@ class ExtractService:
         try:
             df = pd.DataFrame(data_rows, columns=column_names)
 
-            # DataType Mapping from Oracle to Pandas
             type_mapping = {
                 oracledb.DB_TYPE_VARCHAR: 'string',
                 oracledb.DB_TYPE_CHAR: 'string',
@@ -199,16 +198,10 @@ class ExtractService:
                 oracledb.DB_TYPE_CLOB: 'string',
             }
 
+            # Step 1: Build the dtype map for all columns based on metadata.
             dtype_map = {}
             for i, col_name in enumerate(column_names):
-                # If a column is entirely null, fill with 'N/A' and set type to string.
-                if df[col_name].isnull().all():
-                    df[col_name] = df[col_name].fillna('N/A')
-                    dtype_map[col_name] = 'string'
-                    continue
-
                 oracle_type_code = columns_description[i][1]
-                
                 if oracle_type_code == oracledb.DB_TYPE_NUMBER:
                     scale = columns_description[i][5]
                     if scale is not None and scale == 0:
@@ -220,8 +213,14 @@ class ExtractService:
                     if pd_type:
                         dtype_map[col_name] = pd_type
             
+            # Step 2: Apply the initial type conversions.
             if dtype_map:
                 df = df.astype(dtype_map, copy=False)
+
+            # Step 3: Post-process columns that are entirely null.
+            for col_name in df.columns:
+                if df[col_name].isnull().all():
+                    df[col_name] = df[col_name].fillna('N/A').astype('string')
 
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
             file_name = f"report_{timestamp}.parquet"
