@@ -51,11 +51,10 @@ def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str,
         schedule_type=schedule_type
     )
     
+    oracle_transaction = None
     try:
         logger.info(f"SCHEDULER: Instantiating dependencies for job {job_id}.")
-        oracle_connection = get_oracle_connection()
         oracle_transaction = OracleTransaction()
-        oracle_transaction.connection = oracle_connection
         
         extract_service = ExtractService(
             oracle=oracle_transaction, 
@@ -112,8 +111,8 @@ def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str,
         logger.error(f"SCHEDULER: Unhandled exception in job {job_id}. Error: {e}", exc_info=True)
 
     finally:
-        if 'oracle_connection' in locals() and oracle_connection:
-            oracle_connection.close()
+        if oracle_transaction and oracle_transaction.connection:
+            oracle_transaction.connection.close()
         logger.info(f"SCHEDULER: Finished job {job_id}.")
 
 def update_scheduled_jobs():

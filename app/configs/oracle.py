@@ -107,3 +107,6 @@ class OracleTransaction:
     def __exit__(self, exc_type, exc_value, traceback):
         if self.connection:
             self.connection.close()
+
+    def __call__(self):
+        return self
