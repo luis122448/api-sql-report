@@ -51,7 +51,8 @@ class ExtractService:
                 column_names=data_response.object["columns"], 
                 columns_description=data_response.object["description"],
                 id_report=id_report,
-                name_report=name
+                name_report=name,
+                last_exec=last_exec
             )
             if file_path_response.status != 1:
                 raise Exception(file_path_response.log_message)
@@ -188,7 +189,7 @@ class ExtractService:
         finally:
             return object_response
 
-    def to_parquet(self, data_rows: list, column_names: list, columns_description: list, id_report: int, name_report: str) -> ApiResponseObject:
+    def to_parquet(self, data_rows: list, column_names: list, columns_description: list, id_report: int, name_report: str, last_exec: datetime) -> ApiResponseObject:
         object_response = ApiResponseObject(
             status=1, message="Data converted to Parquet file successfully.", log_message="OK!")
         try:
@@ -197,6 +198,7 @@ class ExtractService:
             # Add traceability columns
             df['ID_REPORT'] = id_report
             df['NAME_REPORT'] = name_report
+            df['LAST_EXEC'] = last_exec
 
             type_mapping = {
                 oracledb.DB_TYPE_VARCHAR: 'string',
