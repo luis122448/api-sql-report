@@ -16,7 +16,7 @@ limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(tags=["Analytics Reports"])
 
 @router.get("/reports/last/{id_report}", dependencies=[Depends(JWTBearer())])
-@limiter.limit("6/minute")
+
 async def get_last_report(
     request: Request, # Add request: Request
     id_report: int,
@@ -63,7 +63,7 @@ async def get_last_report(
         )
 
 @router.get("/reports/specified/{file_name}", dependencies=[Depends(JWTBearer())])
-@limiter.limit("6/minute")
+
 async def get_specified_report(
     request: Request, # Add request: Request
     file_name: str,
