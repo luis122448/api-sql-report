@@ -186,33 +186,43 @@ class ExtractService:
         object_response = ApiResponseObject(
             status=1, message="Data converted to Parquet file successfully.", log_message="OK!")
         try:
-            if not data_rows:
-                object_response.status = 1.1
-                object_response.message = "WARNING!"
-                object_response.log_message = "The data list is empty. No Parquet file generated."
-                return object_response
-
-            # Create a pandas DataFrame directly from rows and columns
             df = pd.DataFrame(data_rows, columns=column_names)
 
             # DataType Mapping from Oracle to Pandas
+            # Using modern pandas dtypes ('string', 'Int64') for better type handling and null support.
             type_mapping = {
-                oracledb.DB_TYPE_VARCHAR: 'object',
-                oracledb.DB_TYPE_CHAR: 'object',
-                oracledb.DB_TYPE_LONG: 'object',
-                oracledb.DB_TYPE_NUMBER: 'float64',
+                oracledb.DB_TYPE_VARCHAR: 'string',
+                oracledb.DB_TYPE_CHAR: 'string',
+                oracledb.DB_TYPE_LONG: 'string',
+                oracledb.DB_TYPE_NVARCHAR: 'string',
                 oracledb.DB_TYPE_DATE: 'datetime64[ns]',
                 oracledb.DB_TYPE_TIMESTAMP: 'datetime64[ns]',
-                oracledb.DB_TYPE_CLOB: 'object',
+                oracledb.DB_TYPE_CLOB: 'string',
             }
 
-            for i, col_name in enumerate(df.columns):
-                # Check if the column is entirely null or empty
-                if df[col_name].isnull().all():
-                    oracle_type = columns_description[i][1]
-                    pd_type = type_mapping.get(oracle_type)
+            dtype_map = {}
+            for i, col_name in enumerate(column_names):
+                oracle_type_code = columns_description[i][1]
+                
+                if oracle_type_code == oracledb.DB_TYPE_NUMBER:
+                    precision = columns_description[i][4]
+                    scale = columns_description[i][5]
+                    
+                    # If scale is 0, it's an integer. Use pandas' nullable integer type.
+                    if scale is not None and scale == 0:
+                        dtype_map[col_name] = 'Int64'
+                    # Otherwise, it's a decimal/float.
+                    else:
+                        dtype_map[col_name] = 'float64'
+                else:
+                    pd_type = type_mapping.get(oracle_type_code)
                     if pd_type:
-                        df[col_name] = df[col_name].astype(pd_type)
+                        dtype_map[col_name] = pd_type
+            
+            # Apply the explicit dtypes to the DataFrame.
+            # This ensures all columns have a defined type, even if they are all null.
+            if dtype_map:
+                df = df.astype(dtype_map, copy=False)
 
             # Generate a unique filename
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
