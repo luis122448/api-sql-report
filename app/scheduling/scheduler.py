@@ -6,13 +6,13 @@ from concurrent.futures import ThreadPoolExecutor
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
-from app.configs.oracle import OracleTransaction, DB_ORACLE_POOL_MAX
-from app.services.extract_service import ExtractService
-from app.services.minio_service import MinioService
-from app.services.metadata_service import MetadataService
-from app.scheduling.report_config_loader import ReportConfigLoader
-from app.core.config_manager import ReportConfigManager
-from app.configs.minio import MinioConfig
+from configs.oracle import OracleTransaction, DB_ORACLE_POOL_MAX
+from services.extract_service import ExtractService
+from services.minio_service import MinioService
+from services.metadata_service import MetadataService
+from scheduling.report_config_loader import ReportConfigLoader
+from core.config_manager import ReportConfigManager
+from configs.minio import MinioConfig
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
