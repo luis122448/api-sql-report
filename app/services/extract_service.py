@@ -46,7 +46,13 @@ class ExtractService:
             last_exec = data_response.last_exec
 
             # Step 3: If data retrieval was successful, convert to Parquet
-            file_path_response = self.to_parquet(data_response.object["rows"], data_response.object["columns"], data_response.object["description"])
+            file_path_response = self.to_parquet(
+                data_rows=data_response.object["rows"], 
+                column_names=data_response.object["columns"], 
+                columns_description=data_response.object["description"],
+                id_report=id_report,
+                name_report=name
+            )
             if file_path_response.status != 1:
                 raise Exception(file_path_response.log_message)
 
@@ -182,11 +188,15 @@ class ExtractService:
         finally:
             return object_response
 
-    def to_parquet(self, data_rows: list, column_names: list, columns_description: list) -> ApiResponseObject:
+    def to_parquet(self, data_rows: list, column_names: list, columns_description: list, id_report: int, name_report: str) -> ApiResponseObject:
         object_response = ApiResponseObject(
             status=1, message="Data converted to Parquet file successfully.", log_message="OK!")
         try:
             df = pd.DataFrame(data_rows, columns=column_names)
+
+            # Add traceability columns
+            df['ID_REPORT'] = id_report
+            df['NAME_REPORT'] = name_report
 
             type_mapping = {
                 oracledb.DB_TYPE_VARCHAR: 'string',

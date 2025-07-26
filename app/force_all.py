@@ -1,51 +1,48 @@
-
 import logging
-from concurrent.futures import ThreadPoolExecutor
-from scheduling.report_config_loader import ReportConfigLoader
-from scheduling.scheduler import run_scheduled_extraction
-from configs.oracle import DB_ORACLE_POOL_MAX
+import sys
+import os
+
+# Add the project root to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app.scheduling.report_config_loader import ReportConfigLoader
+from app.scheduling.scheduler import run_scheduled_extraction
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def force_reprocess_all_reports_unconditionally():
+def force_reprocess_all_reports_sequentially():
     """
-    Forces the reprocessing of ALL configured reports, regardless of their current status.
+    Forces the reprocessing of ALL configured reports, one by one, to ensure data integrity.
     """
-    logger.info("Starting forced reprocessing of ALL configured reports.")
+    logger.info("Starting forced sequential reprocessing of ALL configured reports.")
     
-    # Get all reports directly from the configuration source.
     all_reports = ReportConfigLoader.get_reports_from_oracle()
     
     if not all_reports:
         logger.info("No reports found in the configuration.")
         return
 
-    logger.info(f"Found {len(all_reports)} total reports. Starting unconditional parallel execution...")
+    logger.info(f"Found {len(all_reports)} total reports. Starting sequential execution...")
 
-    # Use a ThreadPoolExecutor to run extractions in parallel.
-    with ThreadPoolExecutor(max_workers=DB_ORACLE_POOL_MAX) as executor:
-        futures = [
-            executor.submit(
-                run_scheduled_extraction,
+    # Run extractions sequentially to avoid any concurrency issues.
+    for report in all_reports:
+        try:
+            logger.info(f"--- Processing report: {report.name} (ID: {report.id_report}) ---")
+            run_scheduled_extraction(
                 report.id_cia,
                 report.id_report,
                 report.name,
                 report.query,
                 report.company,
                 report.refreshtime
-            ) for report in all_reports
-        ]
-        
-        # Wait for all futures to complete
-        for future in futures:
-            try:
-                future.result()
-            except Exception as e:
-                logger.error(f"An error occurred during a report reprocessing task: {e}", exc_info=True)
+            )
+            logger.info(f"--- Finished report: {report.name} (ID: {report.id_report}) ---")
+        except Exception as e:
+            logger.error(f"An error occurred during the reprocessing of report {report.id_report}: {e}", exc_info=True)
 
-    logger.info("Forced reprocessing of all configured reports has been completed.")
+    logger.info("Forced sequential reprocessing of all configured reports has been completed.")
 
 if __name__ == "__main__":
-    force_reprocess_all_reports_unconditionally()
+    force_reprocess_all_reports_sequentially()

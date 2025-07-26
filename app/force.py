@@ -1,56 +1,50 @@
-
 import logging
-from concurrent.futures import ThreadPoolExecutor
-from services.metadata_service import MetadataService
-from scheduling.scheduler import run_scheduled_extraction
-from configs.oracle import DB_ORACLE_POOL_MAX
+import sys
+import os
+
+# Add the project root to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app.services.metadata_service import MetadataService
+from app.scheduling.scheduler import run_scheduled_extraction
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def force_reprocess_reports():
+def force_reprocess_reports_sequentially():
     """
-    Forces the reprocessing of reports that need it by leveraging the existing
-    cleanup_and_get_reports_to_reprocess logic from the MetadataService.
-    This script is thread-safe.
+    Forces the reprocessing of reports that need it, one by one, to ensure data integrity.
     """
-    logger.info("Starting forced reprocessing of reports.")
+    logger.info("Starting forced sequential reprocessing of reports.")
     
-    # Instantiate MetadataService locally to ensure thread safety.
     metadata_service = MetadataService()
     
-    # Get all reports that need reprocessing.
     reports_to_reprocess = metadata_service.cleanup_and_get_reports_to_reprocess(urgent_only=False)
     
     if not reports_to_reprocess:
         logger.info("No reports found to reprocess.")
         return
 
-    logger.info(f"Found {len(reports_to_reprocess)} reports to reprocess. Starting parallel execution...")
+    logger.info(f"Found {len(reports_to_reprocess)} reports to reprocess. Starting sequential execution...")
 
-    # Use a ThreadPoolExecutor to run extractions in parallel.
-    with ThreadPoolExecutor(max_workers=DB_ORACLE_POOL_MAX) as executor:
-        futures = [
-            executor.submit(
-                run_scheduled_extraction,
+    # Run extractions sequentially to avoid any concurrency issues.
+    for report in reports_to_reprocess:
+        try:
+            logger.info(f"--- Processing report: {report.name} (ID: {report.id_report}) ---")
+            run_scheduled_extraction(
                 report.id_cia,
                 report.id_report,
                 report.name,
                 report.query,
                 report.company,
                 report.refreshtime
-            ) for report in reports_to_reprocess
-        ]
-        
-        # Wait for all futures to complete
-        for future in futures:
-            try:
-                future.result()
-            except Exception as e:
-                logger.error(f"An error occurred during a report reprocessing task: {e}", exc_info=True)
+            )
+            logger.info(f"--- Finished report: {report.name} (ID: {report.id_report}) ---")
+        except Exception as e:
+            logger.error(f"An error occurred during the reprocessing of report {report.id_report}: {e}", exc_info=True)
 
-    logger.info("Forced reprocessing of reports has been completed.")
+    logger.info("Forced sequential reprocessing of reports has been completed.")
 
 if __name__ == "__main__":
-    force_reprocess_reports()
+    force_reprocess_reports_sequentially()
