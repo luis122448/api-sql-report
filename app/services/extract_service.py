@@ -198,7 +198,7 @@ class ExtractService:
                 oracledb.DB_TYPE_CLOB: 'string',
             }
 
-            # Phase 1: Attempt ideal data typing based on database metadata.
+            # Attempt to apply the ideal data type for each column based on Oracle metadata.
             for i, col_name in enumerate(column_names):
                 oracle_type_code = columns_description[i][1]
                 target_type = None
@@ -215,13 +215,6 @@ class ExtractService:
                     except (ValueError, TypeError):
                         # If conversion fails (e.g., mixed data), fallback to string.
                         df[col_name] = df[col_name].astype('string')
-
-            # Phase 2: Final cleanup. Aggressively replace any column that is still empty.
-            for col_name in df.columns:
-                # This robustly checks for columns containing only nulls or empty strings.
-                if df[col_name].astype(str).fillna('').eq('').all():
-                    # Replace the entire column with 'N/A' and ensure it's a string type.
-                    df[col_name] = pd.Series(['N/A'] * len(df), index=df.index, dtype='string')
 
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
             file_name = f"report_{timestamp}.parquet"
