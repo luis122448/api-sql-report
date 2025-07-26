@@ -217,10 +217,12 @@ class ExtractService:
             if dtype_map:
                 df = df.astype(dtype_map, copy=False)
 
-            # Step 3: Post-process columns that are entirely null.
+            # Step 3: Post-process columns that are effectively empty (all nulls or empty strings).
             for col_name in df.columns:
-                if df[col_name].isnull().all():
-                    df[col_name] = df[col_name].fillna('N/A').astype('string')
+                # This check robustly handles columns with any mix of None, NaN, and empty strings.
+                if df[col_name].fillna('').eq('').all():
+                    df[col_name] = 'N/A'  # Assigning a scalar fills the entire column
+                    df[col_name] = df[col_name].astype('string')
 
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
             file_name = f"report_{timestamp}.parquet"
