@@ -46,7 +46,7 @@ class ExtractService:
             last_exec = data_response.last_exec
 
             # Step 3: If data retrieval was successful, convert to Parquet
-            file_path_response = self.to_parquet(data_response.list, data_response.object["columns"], data_response.object["description"])
+            file_path_response = self.to_parquet(data_response.object["rows"], data_response.object["columns"], data_response.object["description"])
             if file_path_response.status != 1:
                 raise Exception(file_path_response.log_message)
 
@@ -147,9 +147,9 @@ class ExtractService:
         response.object = decoded_query
         return response
 
-    def get_data(self, query: str) -> ApiResponseList:
+    def get_data(self, query: str) -> ApiResponseObject:
         # We now initialize with a fallback time and update it with the precise DB time.
-        object_response = ApiResponseList(
+        object_response = ApiResponseObject(
             status=1, message="OK!", log_message="OK!", last_exec=datetime.now())
         try:
             # Get current DB time for logging execution using the transactional cursor
@@ -164,10 +164,9 @@ class ExtractService:
 
             # Get columns and result
             columns = [col[0] for col in self.oracle_cursor.description]
-            # rows = self.oracle_cursor.fetchall() # This is already done
-
-            object_response.list = rows
+            
             object_response.object = {
+                "rows": rows,
                 "columns": columns,
                 "description": self.oracle_cursor.description
             }
