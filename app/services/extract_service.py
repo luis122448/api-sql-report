@@ -46,7 +46,7 @@ class ExtractService:
             last_exec = data_response.last_exec
 
             # Step 3: If data retrieval was successful, convert to Parquet
-            file_path_response = self.to_parquet(data_response.list, data_response.object)
+            file_path_response = self.to_parquet(data_response.list, data_response.object["columns"], data_response.object["description"])
             if file_path_response.status != 1:
                 raise Exception(file_path_response.log_message)
 
@@ -164,10 +164,13 @@ class ExtractService:
 
             # Get columns and result
             columns = [col[0] for col in self.oracle_cursor.description]
-            result = [dict(zip(columns, row)) for row in rows]
+            # rows = self.oracle_cursor.fetchall() # This is already done
 
-            object_response.list = result
-            object_response.object = self.oracle_cursor.description
+            object_response.list = rows
+            object_response.object = {
+                "columns": columns,
+                "description": self.oracle_cursor.description
+            }
 
         except oracledb.Error as e:
             object_response.status = 1.2
@@ -180,18 +183,18 @@ class ExtractService:
         finally:
             return object_response
 
-    def to_parquet(self, data_list: list, columns_description: list) -> ApiResponseObject:
+    def to_parquet(self, data_rows: list, column_names: list, columns_description: list) -> ApiResponseObject:
         object_response = ApiResponseObject(
             status=1, message="Data converted to Parquet file successfully.", log_message="OK!")
         try:
-            if not data_list:
+            if not data_rows:
                 object_response.status = 1.1
                 object_response.message = "WARNING!"
                 object_response.log_message = "The data list is empty. No Parquet file generated."
                 return object_response
 
-            # Create a pandas DataFrame
-            df = pd.DataFrame(data_list)
+            # Create a pandas DataFrame directly from rows and columns
+            df = pd.DataFrame(data_rows, columns=column_names)
 
             # DataType Mapping from Oracle to Pandas
             type_mapping = {

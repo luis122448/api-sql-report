@@ -1,6 +1,6 @@
 import time
 from datetime import datetime
-from fastapi import APIRouter, Depends, Response, status, Request
+from fastapi import APIRouter, Depends, Response, status, Request, BackgroundTasks
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.encoders import jsonable_encoder
 from services.extract_service import ExtractService
@@ -8,10 +8,8 @@ from services.metadata_service import MetadataService
 from services.usage_service import UsageService
 from auth.auth_handler import JWTBearer
 from schemas.auth_schema import BasicAnalyticsSchema
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-
-limiter = Limiter(key_func=get_remote_address)
+from scheduling.report_config_loader import ReportConfigLoader
+from scheduling.scheduler import run_scheduled_extraction
 
 router = APIRouter(tags=["Analytics Reports"])
 
@@ -104,3 +102,31 @@ async def get_specified_report(
             token_coduser=token.coduser,
             processing_time_ms=processing_time_ms
         )
+
+@router.post("/reports/force-run")
+async def force_run_report(
+    id_cia: int,
+    id_report: int,
+    background_tasks: BackgroundTasks
+):
+    try:
+        # Get report configuration from the database
+        report_config = ReportConfigLoader.get_report_config(id_cia, id_report)
+        if not report_config:
+            return JSONResponse(content={"status": 1.1, "message": f"Report with id_report {id_report} for id_cia {id_cia} not found."}, status_code=status.HTTP_404_NOT_FOUND)
+
+        # Add the extraction pipeline execution to background tasks
+        background_tasks.add_task(
+            run_scheduled_extraction,
+            report_config.id_cia,
+            report_config.id_report,
+            report_config.name,
+            report_config.query,
+            report_config.company,
+            report_config.refreshtime
+        )
+
+        return JSONResponse(content={"status": 1, "message": f"Report execution for '{report_config.name}' has been scheduled."})
+
+    except Exception as e:
+        return JSONResponse(content={"status": 1.2, "message": f"An unexpected error occurred while scheduling the report: {str(e)}"}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
