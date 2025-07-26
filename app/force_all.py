@@ -1,9 +1,9 @@
 
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from app.scheduling.report_config_loader import ReportConfigLoader
-from app.scheduling.scheduler import run_scheduled_extraction
-from app.configs.oracle import DB_ORACLE_POOL_MAX
+from scheduling.report_config_loader import ReportConfigLoader
+from scheduling.scheduler import run_scheduled_extraction
+from configs.oracle import DB_ORACLE_POOL_MAX
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
