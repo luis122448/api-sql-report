@@ -36,3 +36,27 @@ class ReportConfigLoader:
         except Exception as e:
             logger.error(f"Error fetching reports from Oracle: {e}")
         return reports
+
+    @staticmethod
+    def get_report_config(id_cia: int, id_report: int) -> Report | None:
+        """
+        Fetches the configuration for a single report from the Oracle database.
+        """
+        report = None
+        # Assuming the stored procedure can be called with an id_report to filter.
+        sql_query = f"SELECT id_cia, company, id_report, name, query, swapi, refreshtime FROM pack_exceldinamico.sp_buscar_api({id_report}) WHERE id_cia = {id_cia}"
+        
+        try:
+            with OracleTransaction() as connection:
+                cursor = connection.cursor()
+                cursor.execute(sql_query)
+                row = cursor.fetchone()
+                if row:
+                    columns = [col[0] for col in cursor.description]
+                    report_data = dict(zip(columns, row))
+                    report = Report(**report_data)
+                    logger.info(f"Successfully fetched configuration for report ID: {id_report}")
+        except Exception as e:
+            logger.error(f"Error fetching single report config for ID {id_report}: {e}")
+            
+        return report
