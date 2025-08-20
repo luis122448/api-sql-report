@@ -22,11 +22,12 @@ class ExtractService:
         self.oracle_connection = oracle.connection
         self.oracle_cursor = oracle.connection.cursor()
 
-    def run_extraction_pipeline(self, id_cia: int, id_report: int, name: str, query: str, company: str = None) -> ApiResponseObject:
+    def run_extraction_pipeline(self, id_cia: int, id_report: int, name: str, query: str, company: str = None, format: str = 'parquet') -> ApiResponseObject:
         start_pipeline_time = datetime.now()
         pipeline_status = 'OK'
         pipeline_error_message = None
-        object_name = None
+        object_name_parquet = None
+        object_name_csv = None
         last_exec = None
         decoded_query = None
         processing_time_ms = None
@@ -45,8 +46,8 @@ class ExtractService:
                 raise Exception(data_response.log_message)
             last_exec = data_response.last_exec
 
-            # Step 3: If data retrieval was successful, convert to Parquet
-            file_path_response = self.to_parquet(
+            # Step 3: If data retrieval was successful, convert to Parquet and CSV
+            parquet_path_response = self.to_parquet(
                 data_rows=data_response.object["rows"], 
                 column_names=data_response.object["columns"], 
                 columns_description=data_response.object["description"],
@@ -54,14 +55,29 @@ class ExtractService:
                 name_report=name,
                 last_exec=last_exec
             )
-            if file_path_response.status != 1:
-                raise Exception(file_path_response.log_message)
+            if parquet_path_response.status != 1:
+                raise Exception(parquet_path_response.log_message)
 
-            # Step 4: Upload the Parquet file to Minio
-            upload_response = self.upload_to_minio(file_path_response.object)
-            if upload_response.status != 1:
-                raise Exception(upload_response.log_message)
-            object_name = upload_response.object["file_name"]
+            csv_path_response = self.to_csv(
+                data_rows=data_response.object["rows"],
+                column_names=data_response.object["columns"],
+                id_report=id_report,
+                name_report=name,
+                last_exec=last_exec
+            )
+            if csv_path_response.status != 1:
+                raise Exception(csv_path_response.log_message)
+
+            # Step 4: Upload the files to Minio
+            upload_parquet_response = self.upload_to_minio(parquet_path_response.object)
+            if upload_parquet_response.status != 1:
+                raise Exception(upload_parquet_response.log_message)
+            object_name_parquet = upload_parquet_response.object["file_name"]
+
+            upload_csv_response = self.upload_to_minio(csv_path_response.object)
+            if upload_csv_response.status != 1:
+                raise Exception(upload_csv_response.log_message)
+            object_name_csv = upload_csv_response.object["file_name"]
 
         except Exception as e:
             pipeline_status = 'FAILED'
@@ -77,7 +93,8 @@ class ExtractService:
                 id_report=id_report,
                 name=name,
                 cadsql=decoded_query if decoded_query else query, # Log original query if decode failed
-                object_name=object_name,
+                object_name_parquet=object_name_parquet,
+                object_name_csv=object_name_csv,
                 last_exec=last_exec if last_exec else datetime.now(), # Log current time if no DB time obtained
                 processing_time_ms=processing_time_ms,
                 status=pipeline_status,
@@ -242,6 +259,36 @@ class ExtractService:
         finally:
             return object_response
 
+    def to_csv(self, data_rows: list, column_names: list, id_report: int, name_report: str, last_exec: datetime) -> ApiResponseObject:
+        object_response = ApiResponseObject(
+            status=1, message="Data converted to CSV file successfully.", log_message="OK!")
+        try:
+            df = pd.DataFrame(data_rows, columns=column_names)
+
+            # Add traceability columns
+            df['ID_REPORT'] = id_report
+            df['NAME_REPORT'] = name_report
+            df['LAST_EXEC'] = last_exec
+
+            # Clean data: remove the '|' character from all columns
+            for col in df.columns:
+                if df[col].dtype == 'object':
+                    df[col] = df[col].astype(str).str.replace('|', '', regex=False)
+
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            file_name = f"report_{timestamp}.csv"
+            file_path = f"/tmp/{file_name}"
+
+            df.to_csv(file_path, sep='|', index=False)
+            object_response.object = file_path
+
+        except Exception as e:
+            object_response.status = 1.2
+            object_response.message = "ERROR!"
+            object_response.log_message = f"ERROR (CSV) : {e}"
+        finally:
+            return object_response
+
     def upload_to_minio(self, file_path: str) -> ApiResponseObject:
         object_response = ApiResponseObject(
             status=1, message="File uploaded to Minio successfully.", log_message="OK!")
@@ -262,5 +309,3 @@ class ExtractService:
             if os.path.exists(file_path):
                 os.remove(file_path)
             return object_response
-
-    # Removed read_parquet_data and read_latest_parquet_data from here

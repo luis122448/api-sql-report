@@ -32,11 +32,12 @@ def init_db():
                 id_report INTEGER NOT NULL,
                 name TEXT NOT NULL,
                 cadsql TEXT NOT NULL,
-                object_name TEXT, 
+                object_name_parquet TEXT,
+                object_name_csv TEXT,
                 last_exec TIMESTAMP NOT NULL,
-                processing_time_ms INTEGER, 
-                status TEXT NOT NULL DEFAULT 'OK', 
-                error_message TEXT, 
+                processing_time_ms INTEGER,
+                status TEXT NOT NULL DEFAULT 'OK',
+                error_message TEXT,
                 PRIMARY KEY (id_cia, id_report, last_exec)
             )
         """)

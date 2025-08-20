@@ -17,6 +17,7 @@ router = APIRouter(tags=["Analytics Reports"])
 async def get_last_report(
     request: Request, # Add request: Request
     id_report: int,
+    format: str = 'parquet',
     extract_service: ExtractService = Depends(),
     metadata_service: MetadataService = Depends(),
     usage_service: UsageService = Depends(), # Inject UsageService
@@ -31,7 +32,15 @@ async def get_last_report(
             error_response = { "status": 1.1, "message": "No metadata found for the given id_cia and id_report.", "log_user": token.coduser }
             return JSONResponse(content=jsonable_encoder(error_response), status_code=status.HTTP_404_NOT_FOUND)
 
-        file_name = metadata_entry["object_name"]
+        file_name = None
+        if format == 'csv':
+            file_name = metadata_entry.get("object_name_csv")
+        else:
+            file_name = metadata_entry.get("object_name_parquet")
+
+        if not file_name:
+            error_response = { "status": 1.1, "message": f"No report found for the specified format '{format}'.", "log_user": token.coduser }
+            return JSONResponse(content=jsonable_encoder(error_response), status_code=status.HTTP_404_NOT_FOUND)
 
         # Generate a presigned URL for the file
         presigned_url = extract_service.minio_service.generate_presigned_url(

@@ -11,7 +11,8 @@ logger = logging.getLogger(__name__)
 
 class MetadataService:
     def log_report_metadata(self, id_cia: int, id_report: int, name: str, cadsql: str, 
-                            object_name: str = None, last_exec: datetime = None, 
+                            object_name_parquet: str = None, object_name_csv: str = None, 
+                            last_exec: datetime = None, 
                             processing_time_ms: int = None, status: str = 'OK', 
                             error_message: str = None) -> ApiResponseObject:
         # Logs the metadata of a generated report into the SQLite database.
@@ -27,9 +28,9 @@ class MetadataService:
             now_in_peru = datetime.now(peru_tz)
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO METADATA_REPORT (id_cia, id_report, name, cadsql, object_name, last_exec, processing_time_ms, status, error_message)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (id_cia, id_report, name, cadsql, object_name, last_exec or now_in_peru, processing_time_ms, status, error_message))
+                INSERT INTO METADATA_REPORT (id_cia, id_report, name, cadsql, object_name_parquet, object_name_csv, last_exec, processing_time_ms, status, error_message)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (id_cia, id_report, name, cadsql, object_name_parquet, object_name_csv, last_exec or now_in_peru, processing_time_ms, status, error_message))
             conn.commit()
             response.object = {"id_cia": id_cia, "id_report": id_report}
         except sqlite3.IntegrityError:
@@ -53,10 +54,10 @@ class MetadataService:
         try:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT id_cia, id_report, name, cadsql, object_name, last_exec, processing_time_ms, status, error_message
+                SELECT id_cia, id_report, name, cadsql, object_name_parquet, object_name_csv, last_exec, processing_time_ms, status, error_message
                 FROM METADATA_REPORT
-                WHERE id_cia = ? AND object_name = ? AND status = 'OK'
-            """, (id_cia, object_name))
+                WHERE id_cia = ? AND (object_name_parquet = ? OR object_name_csv = ?) AND status = 'OK'
+            """, (id_cia, object_name, object_name))
             row = cursor.fetchone()
             if row:
                 return dict(row)
@@ -76,7 +77,7 @@ class MetadataService:
         try:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT id_cia, id_report, name, cadsql, object_name, last_exec, processing_time_ms, status, error_message
+                SELECT id_cia, id_report, name, cadsql, object_name_parquet, object_name_csv, last_exec, processing_time_ms, status, error_message
                 FROM METADATA_REPORT
                 WHERE id_cia = ? AND id_report = ? AND status = 'OK'
                 ORDER BY last_exec DESC
@@ -315,7 +316,8 @@ class MetadataService:
                     id_report,
                     name,
                     cadsql,
-                    object_name,
+                    object_name_parquet,
+                    object_name_csv,
                     last_exec,
                     processing_time_ms,
                     status,
@@ -328,6 +330,40 @@ class MetadataService:
                 ORDER BY
                     last_exec DESC
             """,params)
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+        except sqlite3.Error as e:
+            logger.error(f"Error retrieving all executions: {e}")
+            return []
+        finally:
+            conn.close()
+
+
+    def get_all_executions(self) -> list[dict[str, Any]]:
+        """Returns a list of all report executions, ordered by last_exec DESC."""
+        conn = get_db_connection()
+        if not conn:
+            logger.error("Failed to connect to the database.")
+            return []
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT
+                    id_cia,
+                    id_report,
+                    name,
+                    cadsql,
+                    object_name_parquet,
+                    object_name_csv,
+                    last_exec,
+                    processing_time_ms,
+                    status,
+                    error_message
+                FROM
+                    METADATA_REPORT
+                ORDER BY
+                    last_exec DESC
+            """)
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
         except sqlite3.Error as e:
