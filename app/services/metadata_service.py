@@ -262,6 +262,49 @@ class MetadataService:
         finally:
             conn.close()
 
+    def get_deprecated_reports(self):
+        # Identifies reports that need to be reprocessed without cleaning up existing data.
+        conn = get_db_connection()
+        if not conn:
+            logger.error("Failed to connect to the database.")
+            return []
+        try:
+            peru_tz = pytz.timezone('America/Lima')
+            # 1. Get all configured reports from Oracle
+            all_reports = ReportConfigLoader.get_reports_from_oracle()
+            reports_to_reprocess = []
+
+            for report in all_reports:
+                # 2. Check for the latest successful execution of the report
+                latest_successful_exec = self.get_latest_report_metadata(report.id_cia, report.id_report)
+
+                if not latest_successful_exec:
+                    # Reprocess if no successful execution exists
+                    reports_to_reprocess.append(report)
+                    logger.info(f"Report {report.name} marked for reprocessing (no successful execution found).")
+                else:
+                    # Reprocess if the report is outdated
+                    last_exec_str = latest_successful_exec['last_exec']
+                    # Convert string to datetime object
+                    last_exec_time = datetime.fromisoformat(last_exec_str)
+                    
+                    # Ensure last_exec_time is offset-aware for comparison
+                    if last_exec_time.tzinfo is None:
+                        last_exec_time = last_exec_time.astimezone()
+
+                    now_aware = datetime.now(peru_tz)
+                    if now_aware - last_exec_time > timedelta(minutes=report.refreshtime):
+                        reports_to_reprocess.append(report)
+                        logger.info(f"Report {report.name} marked for reprocessing (outdated).")
+
+            return reports_to_reprocess
+
+        except sqlite3.Error as e:
+            logger.error(f"Error during check for deprecated reports: {e}")
+            return []
+        finally:
+            conn.close()
+
     def clear_scheduler_logs_on_startup(self):
         # Clears all entries from SCHEDULED_JOBS_LOG table. Used on application startup.
         conn = get_db_connection()
