@@ -1,6 +1,7 @@
 
 import logging
 import pytz
+import re
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -139,6 +140,17 @@ def update_scheduled_jobs():
     metadata_service = MetadataService()
     current_reports = ReportConfigLoader.get_reports_from_oracle()
     peru_tz = pytz.timezone('America/Lima')
+
+    # Create Minio buckets for each company
+    company_names = {report.company for report in current_reports if report.company}
+    for company_name in company_names:
+        try:
+            # Sanitize company name to create a valid bucket name
+            bucket_name = re.sub(r'[^a-z0-9.-]', '', company_name.lower().replace(' ', '-'))
+            if bucket_name:
+                minio_service.create_bucket(bucket_name)
+        except Exception as e:
+            logger.error(f"Error creating bucket for company {company_name}: {e}")
 
     grouped_reports = {}
     for report in current_reports:

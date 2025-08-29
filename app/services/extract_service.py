@@ -71,12 +71,12 @@ class ExtractService:
                 raise Exception(csv_path_response.log_message)
 
             # Step 4: Upload the files to Minio
-            upload_parquet_response = self.upload_to_minio(parquet_path_response.object)
+            upload_parquet_response = self.upload_to_minio(parquet_path_response.object, company)
             if upload_parquet_response.status != 1:
                 raise Exception(upload_parquet_response.log_message)
             object_name_parquet = upload_parquet_response.object["file_name"]
 
-            upload_csv_response = self.upload_to_minio(csv_path_response.object)
+            upload_csv_response = self.upload_to_minio(csv_path_response.object, company)
             if upload_csv_response.status != 1:
                 raise Exception(upload_csv_response.log_message)
             object_name_csv = upload_csv_response.object["file_name"]
@@ -291,11 +291,15 @@ class ExtractService:
         finally:
             return object_response
 
-    def upload_to_minio(self, file_path: str) -> ApiResponseObject:
+    def upload_to_minio(self, file_path: str, company: str) -> ApiResponseObject:
         object_response = ApiResponseObject(
             status=1, message="File uploaded to Minio successfully.", log_message="OK!")
         try:
-            bucket_name = "reports"
+            # Sanitize company name to create a valid bucket name
+            bucket_name = re.sub(r'[^a-z0-9.-]', '', company.lower().replace(' ', '-'))
+            if not bucket_name:
+                bucket_name = "default-bucket"
+
             object_name = os.path.basename(file_path)
             
             self.minio_service.upload_file(bucket_name, object_name, file_path)
