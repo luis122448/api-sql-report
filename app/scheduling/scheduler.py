@@ -141,16 +141,14 @@ def update_scheduled_jobs():
     current_reports = ReportConfigLoader.get_reports_from_oracle()
     peru_tz = pytz.timezone('America/Lima')
 
-    # Create Minio buckets for each company
-    company_names = {report.company for report in current_reports if report.company}
-    for company_name in company_names:
+    # Create Minio buckets for each company based on id_cia
+    id_cias = {report.id_cia for report in current_reports if report.id_cia}
+    for id_cia in id_cias:
         try:
-            # Sanitize company name to create a valid bucket name
-            bucket_name = re.sub(r'[^a-z0-9.-]', '', company_name.lower().replace(' ', '-'))
-            if bucket_name:
-                minio_service.create_bucket(bucket_name)
+            bucket_name = f"bucket-{id_cia}"
+            minio_service.create_bucket(bucket_name)
         except Exception as e:
-            logger.error(f"Error creating bucket for company {company_name}: {e}")
+            logger.error(f"Error creating bucket for id_cia {id_cia}: {e}")
 
     grouped_reports = {}
     for report in current_reports:
