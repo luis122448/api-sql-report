@@ -19,6 +19,11 @@ DB_ORACLE_POOL_INCREMENT = int(os.getenv("DB_ORACLE_POOL_INCREMENT", 1))
 
 pool = None
 
+def set_session_timezone(connection):
+    cursor = connection.cursor()
+    cursor.execute("ALTER SESSION SET TIME_ZONE = '-05:00'")
+    cursor.close()
+
 def init_oracle_pool():
     global pool
     try:
@@ -28,7 +33,8 @@ def init_oracle_pool():
             dsn=DB_ORACLE_DSN,
             min=DB_ORACLE_POOL_MIN,
             max=DB_ORACLE_POOL_MAX,
-            increment=DB_ORACLE_POOL_INCREMENT
+            increment=DB_ORACLE_POOL_INCREMENT,
+            session_callback=set_session_timezone
         )
         logger.info("Oracle connection pool created successfully.")
     except oracledb.Error as e:

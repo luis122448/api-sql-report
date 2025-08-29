@@ -215,6 +215,7 @@ class ExtractService:
             df = pd.DataFrame(data_rows, columns=column_names)
 
             # Add traceability columns
+            df['ID_CIA'] = id_cia
             df['ID_REPORT'] = id_report
             df['NAME_REPORT'] = name_report
             df['LAST_EXEC'] = last_exec
@@ -268,6 +269,7 @@ class ExtractService:
             df = pd.DataFrame(data_rows, columns=column_names)
 
             # Add traceability columns
+            df['ID_CIA'] = id_cia
             df['ID_REPORT'] = id_report
             df['NAME_REPORT'] = name_report
             df['LAST_EXEC'] = last_exec
