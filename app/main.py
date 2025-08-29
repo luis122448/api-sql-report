@@ -1,3 +1,4 @@
+import threading
 from fastapi import FastAPI
 from routers import extract_router, metadata_router, analytics_router, auth_router, usage_router
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,7 +38,8 @@ app.include_router(usage_router.router, prefix="/api")
 
 @app.on_event("startup")
 async def startup_event():
-    start_scheduler()
+    thread = threading.Thread(target=start_scheduler)
+    thread.start()
 
 @app.on_event("shutdown")
 async def shutdown_event():

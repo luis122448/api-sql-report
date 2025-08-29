@@ -51,6 +51,7 @@ class ExtractService:
                 data_rows=data_response.object["rows"], 
                 column_names=data_response.object["columns"], 
                 columns_description=data_response.object["description"],
+                id_cia=id_cia,
                 id_report=id_report,
                 name_report=name,
                 last_exec=last_exec
@@ -61,6 +62,7 @@ class ExtractService:
             csv_path_response = self.to_csv(
                 data_rows=data_response.object["rows"],
                 column_names=data_response.object["columns"],
+                id_cia=id_cia,
                 id_report=id_report,
                 name_report=name,
                 last_exec=last_exec
@@ -206,7 +208,7 @@ class ExtractService:
         finally:
             return object_response
 
-    def to_parquet(self, data_rows: list, column_names: list, columns_description: list, id_report: int, name_report: str, last_exec: datetime) -> ApiResponseObject:
+    def to_parquet(self, data_rows: list, column_names: list, columns_description: list, id_cia: int, id_report: int, name_report: str, last_exec: datetime) -> ApiResponseObject:
         object_response = ApiResponseObject(
             status=1, message="Data converted to Parquet file successfully.", log_message="OK!")
         try:
@@ -246,7 +248,7 @@ class ExtractService:
                         df[col_name] = df[col_name].astype('string')
 
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-            file_name = f"report_{timestamp}.parquet"
+            file_name = f"report_{id_cia}_{id_report}_{timestamp}.parquet"
             file_path = f"/tmp/{file_name}"
 
             df.to_parquet(file_path, engine='pyarrow', index=False)
@@ -259,7 +261,7 @@ class ExtractService:
         finally:
             return object_response
 
-    def to_csv(self, data_rows: list, column_names: list, id_report: int, name_report: str, last_exec: datetime) -> ApiResponseObject:
+    def to_csv(self, data_rows: list, column_names: list, id_cia: int, id_report: int, name_report: str, last_exec: datetime) -> ApiResponseObject:
         object_response = ApiResponseObject(
             status=1, message="Data converted to CSV file successfully.", log_message="OK!")
         try:
@@ -276,7 +278,7 @@ class ExtractService:
                     df[col] = df[col].astype(str).str.replace('|', '', regex=False)
 
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-            file_name = f"report_{timestamp}.csv"
+            file_name = f"report_{id_cia}_{id_report}_{timestamp}.csv"
             file_path = f"/tmp/{file_name}"
 
             df.to_csv(file_path, sep='|', index=False)
