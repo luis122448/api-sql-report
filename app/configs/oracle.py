@@ -19,7 +19,8 @@ DB_ORACLE_POOL_INCREMENT = int(os.getenv("DB_ORACLE_POOL_INCREMENT", 1))
 
 pool = None
 
-def set_session_timezone(connection):
+def set_session_timezone(connection, tag):
+    # tag is not used in this case, but is required by the callback signature
     cursor = connection.cursor()
     cursor.execute("ALTER SESSION SET TIME_ZONE = '-05:00'")
     cursor.close()
