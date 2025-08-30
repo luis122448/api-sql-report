@@ -322,7 +322,7 @@ class MetadataService:
             conn.close()
 
     def add_scheduled_job(self, job_id, id_cia, id_report, name, company, event_type, refresh_time, schedule_type, schedule_date):
-        # Adds a new scheduled job to the SCHEDULED_JOBS table.
+        # Adds or replaces a new scheduled job to the SCHEDULED_JOBS table.
         try:
             conn = get_db_connection()
             if not conn:
@@ -330,15 +330,15 @@ class MetadataService:
             cursor = conn.cursor()
             
             cursor.execute("""
-                INSERT INTO SCHEDULED_JOBS (job_id, id_cia, id_report, name, company, event_type, refresh_time, schedule_type, schedule_date)
+                INSERT OR REPLACE INTO SCHEDULED_JOBS (job_id, id_cia, id_report, name, company, event_type, refresh_time, schedule_type, schedule_date)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (job_id, id_cia, id_report, name, company, event_type, refresh_time, schedule_type, schedule_date))
             
             conn.commit()
             conn.close()
-            logger.info(f"Scheduled job {job_id} added successfully.")
+            logger.info(f"Scheduled job {job_id} added or updated successfully.")
         except sqlite3.Error as e:
-            logger.error(f"Failed to add scheduled job {job_id}: {e}")
+            logger.error(f"Failed to add or update scheduled job {job_id}: {e}")
             raise
 
     def get_executions_by_report(self, id_cia, id_report) -> list[dict[str, Any]]:

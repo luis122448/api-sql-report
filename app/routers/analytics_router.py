@@ -44,7 +44,7 @@ async def get_last_report(
 
         # Generate a presigned URL for the file
         presigned_url = extract_service.minio_service.generate_presigned_url(
-            bucket_name="reports", 
+            bucket_name=f"bucket-{token.id_cia}", 
             object_name=file_name
         )
 
@@ -88,7 +88,7 @@ async def get_specified_report(
 
         # Generate a presigned URL for the file
         presigned_url = extract_service.minio_service.generate_presigned_url(
-            bucket_name="reports", 
+            bucket_name=f"bucket-{token.id_cia}", 
             object_name=file_name
         )
 
