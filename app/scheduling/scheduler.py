@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR, EVENT_JOB_MISSED
 from configs.oracle import OracleTransaction, DB_ORACLE_POOL_MAX
 from services.extract_service import ExtractService
 from services.minio_service import MinioService
@@ -14,8 +15,9 @@ from services.metadata_service import MetadataService
 from scheduling.report_config_loader import ReportConfigLoader
 from core.config_manager import ReportConfigManager
 from configs.minio import MinioConfig
+from force_stale_jobs import force_reprocess_stale_jobs
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 scheduler = BackgroundScheduler()
@@ -24,6 +26,19 @@ scheduler = BackgroundScheduler()
 # Assuming Minio client is thread-safe, which is common.
 minio_config_instance = MinioConfig()
 minio_service = MinioService(minio_config=minio_config_instance)
+
+
+def job_listener(event):
+    """Listens to scheduler events and logs them."""
+    if event.exception:
+        logger.error(f"SCHEDULER_EVENT: Job {event.job_id} crashed: {event.exception}", exc_info=True)
+    elif event.code == EVENT_JOB_MISSED:
+        logger.warning(f"SCHEDULER_EVENT: Job {event.job_id} was missed.")
+    elif event.code == EVENT_JOB_EXECUTED:
+        logger.info(f"SCHEDULER_EVENT: Job {event.job_id} executed successfully.")
+    else:
+        logger.info(f"SCHEDULER_EVENT: Job {event.job_id} event: {event.code}")
+
 
 def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str, company: str, refreshtime: int):
     """
@@ -62,15 +77,18 @@ def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str,
     try:
         logger.info(f"SCHEDULER: Instantiating dependencies for job {job_id}.")
         oracle_transaction = OracleTransaction()
+        logger.debug(f"SCHEDULER: OracleTransaction created for job {job_id}.")
 
         # Pass the local, thread-safe instance of MetadataService.
         extract_service = ExtractService(
             oracle=oracle_transaction,
             metadata_service=metadata_service
         )
+        logger.debug(f"SCHEDULER: ExtractService created for job {job_id}.")
 
         logger.info(f"SCHEDULER: Running extraction pipeline for job {job_id}.")
         result = extract_service.run_extraction_pipeline(id_cia, id_report, name, query, company)
+        logger.debug(f"SCHEDULER: Extraction pipeline finished for job {job_id} with status {result.status}.")
 
         end_time = datetime.now(peru_tz)
         duration_ms = int((end_time - start_time).total_seconds() * 1000)
@@ -120,7 +138,9 @@ def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str,
 
     finally:
         if oracle_transaction and oracle_transaction.connection:
+            logger.debug(f"SCHEDULER: Closing Oracle connection for job {job_id}.")
             oracle_transaction.connection.close()
+            logger.debug(f"SCHEDULER: Oracle connection closed for job {job_id}.")
         logger.info(f"SCHEDULER: Finished job {job_id}.")
 
 
@@ -229,6 +249,10 @@ def start_scheduler():
     logger.info("Starting report scheduler...")
     peru_tz = pytz.timezone('America/Lima')
 
+    # Add event listener
+    scheduler.add_listener(job_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR | EVENT_JOB_MISSED)
+    logger.info("Added scheduler event listener.")
+
     # Use a local instance of MetadataService for thread safety.
     metadata_service = MetadataService()
     metadata_service.clear_scheduler_logs_on_startup()
@@ -273,6 +297,16 @@ def start_scheduler():
         replace_existing=True
     )
     logger.info("Scheduled daily cleanup for old Minio objects at 05:00 AM.")
+
+    # Add the guardian job to check for and reprocess stale jobs
+    scheduler.add_job(
+        force_reprocess_stale_jobs,
+        IntervalTrigger(minutes=30, timezone=peru_tz),
+        id='guardian_stale_job_check',
+        name='Guardian: Check for Stale Jobs',
+        replace_existing=True
+    )
+    logger.info("Scheduled guardian job to check for stale reports every 30 minutes.")
 
     update_scheduled_jobs()
 

@@ -5,8 +5,8 @@ import os
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.services.metadata_service import MetadataService
-from app.scheduling.scheduler import run_scheduled_extraction
+from services.metadata_service import MetadataService
+from scheduling.scheduler import run_scheduled_extraction
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

@@ -414,3 +414,128 @@ class MetadataService:
             return []
         finally:
             conn.close()
+
+    def get_stale_reports(self) -> list[Any]:
+        """
+        Identifies reports that are considered 'stale'. A report is stale if it hasn't
+        had a successful execution in more than twice its configured refresh interval.
+        This is a key function for the guardian process.
+        """
+        logger.info("GUARDIAN: Checking for stale reports...")
+        conn = get_db_connection()
+        if not conn:
+            logger.error("GUARDIAN: Could not connect to the database to check for stale reports.")
+            return []
+        
+        try:
+            peru_tz = pytz.timezone('America/Lima')
+            now = datetime.now(peru_tz)
+            stale_reports = []
+
+            # Get all jobs that are supposed to be scheduled
+            cursor = conn.cursor()
+            cursor.execute("SELECT job_id, id_cia, id_report, name, company, refresh_time FROM SCHEDULED_JOBS WHERE refresh_time <= 999")
+            scheduled_jobs = cursor.fetchall()
+            
+            logger.info(f"GUARDIAN: Found {len(scheduled_jobs)} jobs in SCHEDULED_JOBS to check.")
+
+            for job in scheduled_jobs:
+                job_id = job['job_id']
+                refresh_minutes = job['refresh_time']
+                
+                # Define the staleness threshold: 2x the refresh time + a 5-minute buffer
+                staleness_threshold = timedelta(minutes=(refresh_minutes * 2) + 5)
+
+                # Find the last 'job_started' event for this job
+                cursor.execute("""
+                    SELECT timestamp FROM SCHEDULED_JOBS_LOG
+                    WHERE job_id = ? AND event_type = 'job_started'
+                    ORDER BY timestamp DESC
+                    LIMIT 1
+                """, (job_id,))
+                last_start_row = cursor.fetchone()
+
+                is_stale = False
+                last_start_time = None
+
+                if last_start_row:
+                    last_start_time_str = last_start_row['timestamp']
+                    # Ensure the timestamp is timezone-aware
+                    last_start_time = datetime.fromisoformat(last_start_time_str).astimezone(peru_tz)
+                    
+                    if (now - last_start_time) > staleness_threshold:
+                        is_stale = True
+                        logger.warning(f"GUARDIAN: Stale job detected! Job ID: {job_id}, Name: {job['name']}. Last start: {last_start_time_str}. Threshold: {staleness_threshold}.")
+                else:
+                    # If the job has never started, check against its schedule date
+                    cursor.execute("SELECT schedule_date FROM SCHEDULED_JOBS WHERE job_id = ?", (job_id,))
+                    schedule_date_row = cursor.fetchone()
+                    if schedule_date_row:
+                        schedule_date = datetime.fromisoformat(schedule_date_row['schedule_date']).astimezone(peru_tz)
+                        if (now - schedule_date) > staleness_threshold:
+                            is_stale = True
+                            logger.warning(f"GUARDIAN: Stale job detected! Job ID: {job_id}, Name: {job['name']}. Job has never run. Scheduled at: {schedule_date}. Threshold: {staleness_threshold}.")
+
+                if is_stale:
+                    # We need the full report object to reprocess it.
+                    # We can fetch it from the ReportConfigLoader, which reads from Oracle.
+                    # This is inefficient but ensures we have the latest query.
+                    all_reports = ReportConfigLoader.get_reports_from_oracle()
+                    found_report = next((r for r in all_reports if r.id_cia == job['id_cia'] and r.id_report == job['id_report']), None)
+                    
+                    if found_report:
+                        # Attach the last start time to the object for logging purposes
+                        found_report.last_successful_exec = last_start_time
+                        stale_reports.append(found_report)
+                    else:
+                        logger.error(f"GUARDIAN: Could not find full report configuration for stale job ID {job_id}. It may have been removed from Oracle.")
+
+            return stale_reports
+
+        except sqlite3.Error as e:
+            logger.error(f"GUARDIAN: A database error occurred while checking for stale reports: {e}", exc_info=True)
+            return []
+        finally:
+            conn.close()
+            logger.info("GUARDIAN: Finished checking for stale reports.")
+
+    def log_stale_job_report(self, stale_reports: list[Any]):
+        """
+        Logs a list of identified stale jobs into the STALE_JOBS_LOG table for auditing.
+        """
+        logger.info(f"GUARDIAN: Logging {len(stale_reports)} stale jobs to the database.")
+        conn = get_db_connection()
+        if not conn:
+            logger.critical("GUARDIAN: CRITICAL - Cannot connect to DB to log stale jobs.")
+            return
+
+        try:
+            peru_tz = pytz.timezone('America/Lima')
+            now = datetime.now(peru_tz)
+            cursor = conn.cursor()
+            
+            for report in stale_reports:
+                job_id = f"report_{report.id_cia}_{report.id_report}"
+                cursor.execute("""
+                    INSERT INTO STALE_JOBS_LOG (
+                        detection_timestamp, job_id, id_cia, id_report, name, 
+                        last_successful_exec, refresh_time
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    now,
+                    job_id,
+                    report.id_cia,
+                    report.id_report,
+                    report.name,
+                    report.last_successful_exec,
+                    report.refreshtime
+                ))
+            
+            conn.commit()
+            logger.info(f"GUARDIAN: Successfully logged {len(stale_reports)} stale job entries.")
+        except sqlite3.Error as e:
+            logger.error(f"GUARDIAN: Failed to log stale jobs. Error: {e}", exc_info=True)
+            # We do not re-raise the exception to ensure the guardian process can continue.
+        finally:
+            conn.close()

@@ -109,9 +109,30 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_usage_timestamp ON API_USAGE_LOG (timestamp)
         """)
 
+        cursor.execute("""DROP TABLE IF EXISTS STALE_JOBS_LOG""")
+        # Create STALE_JOBS_LOG table for the guardian process
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS STALE_JOBS_LOG (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                detection_timestamp TIMESTAMP NOT NULL,
+                job_id TEXT NOT NULL,
+                id_cia INTEGER,
+                id_report INTEGER,
+                name TEXT,
+                last_successful_exec TIMESTAMP,
+                refresh_time INTEGER
+            )
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_stale_job_id ON STALE_JOBS_LOG (job_id)
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_stale_detection_timestamp ON STALE_JOBS_LOG (detection_timestamp)
+        """)
+
         conn.commit()
         conn.close()
-        logging.info("Database initialized successfully. Table METADATA_REPORT and SCHEDULED_JOBS_LOG are ready.")
+        logging.info("Database initialized successfully. All tables are ready.")
     except sqlite3.Error as e:
         logging.error(f"Database initialization failed: {e}")
         raise
