@@ -46,7 +46,6 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_id_cia_id_report ON METADATA_REPORT (id_cia, id_report)
         """)
         
-        cursor.execute("""DROP TABLE IF EXISTS SCHEDULED_JOBS_LOG""")
         # Create SCHEDULED_JOBS_LOG table (no changes needed here, but ensure it exists)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS SCHEDULED_JOBS_LOG (
@@ -137,5 +136,3 @@ def init_db():
     except sqlite3.Error as e:
         logging.error(f"Database initialization failed: {e}")
         raise
-
-init_db()
