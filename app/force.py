@@ -6,7 +6,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from services.metadata_service import MetadataService
-from scheduling.scheduler import run_scheduled_extraction
+from scheduling.tasks import run_scheduled_extraction
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -38,7 +38,8 @@ def force_reprocess_reports_sequentially():
                 report.name,
                 report.query,
                 report.company,
-                report.refreshtime
+                report.refreshtime,
+                execution_type='FORCE'
             )
             logger.info(f"--- Finished report: {report.name} (ID: {report.id_report}) ---")
         except Exception as e:

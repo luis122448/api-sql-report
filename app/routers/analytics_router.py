@@ -9,7 +9,7 @@ from services.usage_service import UsageService
 from auth.auth_handler import JWTBearer
 from schemas.auth_schema import BasicAnalyticsSchema
 from scheduling.report_config_loader import ReportConfigLoader
-from scheduling.scheduler import run_scheduled_extraction
+from scheduling.tasks import run_scheduled_extraction
 
 router = APIRouter(tags=["Analytics Reports"])
 
@@ -132,7 +132,8 @@ async def force_run_report(
             report_config.name,
             report_config.query,
             report_config.company,
-            report_config.refreshtime
+            report_config.refreshtime,
+            execution_type='FORCE'
         )
 
         return JSONResponse(content={"status": 1, "message": f"Report execution for '{report_config.name}' has been scheduled."})

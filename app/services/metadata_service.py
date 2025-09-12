@@ -14,7 +14,7 @@ class MetadataService:
                             object_name_parquet: str = None, object_name_csv: str = None, 
                             last_exec: datetime = None, 
                             processing_time_ms: int = None, status: str = 'OK', 
-                            error_message: str = None) -> ApiResponseObject:
+                            error_message: str = None, execution_type: str = 'AUTO') -> ApiResponseObject:
         # Logs the metadata of a generated report into the SQLite database.
         response = ApiResponseObject(status=1, message="Metadata logged successfully.")
         conn = get_db_connection()
@@ -28,9 +28,9 @@ class MetadataService:
             now_in_peru = datetime.now(peru_tz)
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO METADATA_REPORT (id_cia, id_report, name, cadsql, object_name_parquet, object_name_csv, last_exec, processing_time_ms, status, error_message)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (id_cia, id_report, name, cadsql, object_name_parquet, object_name_csv, last_exec or now_in_peru, processing_time_ms, status, error_message))
+                INSERT INTO METADATA_REPORT (id_cia, id_report, name, cadsql, object_name_parquet, object_name_csv, last_exec, processing_time_ms, status, error_message, execution_type)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (id_cia, id_report, name, cadsql, object_name_parquet, object_name_csv, last_exec or now_in_peru, processing_time_ms, status, error_message, execution_type))
             conn.commit()
             response.object = {"id_cia": id_cia, "id_report": id_report}
         except sqlite3.IntegrityError:
@@ -342,15 +342,13 @@ class MetadataService:
             raise
 
     def get_executions_by_report(self, id_cia, id_report) -> list[dict[str, Any]]:
-        """Returns a list of all report executions, ordered by id_cia and id_report DESC."""
+        """Returns a list of the last 100 report executions for a given report."""
         conn = get_db_connection()
         if not conn:
             logger.error("Failed to connect to the database.")
             return []
         try:
-            params = []
-            params.append(id_cia)
-            params.append(id_report)
+            params = [id_cia, id_report]
             
             cursor = conn.cursor()
             cursor.execute("""
@@ -364,7 +362,8 @@ class MetadataService:
                     last_exec,
                     processing_time_ms,
                     status,
-                    error_message
+                    error_message,
+                    execution_type
                 FROM
                     METADATA_REPORT
                 WHERE
@@ -372,11 +371,12 @@ class MetadataService:
                     AND id_report = ?
                 ORDER BY
                     last_exec DESC
-            """,params)
+                LIMIT 100
+            """, params)
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
         except sqlite3.Error as e:
-            logger.error(f"Error retrieving all executions: {e}")
+            logger.error(f"Error retrieving executions by report: {e}")
             return []
         finally:
             conn.close()
@@ -537,5 +537,29 @@ class MetadataService:
         except sqlite3.Error as e:
             logger.error(f"GUARDIAN: Failed to log stale jobs. Error: {e}", exc_info=True)
             # We do not re-raise the exception to ensure the guardian process can continue.
+        finally:
+            conn.close()
+
+    def get_stale_job_logs(self) -> list[dict[str, Any]]:
+        """Returns the last 500 entries from the stale jobs log."""
+        conn = get_db_connection()
+        if not conn:
+            logger.error("Failed to connect to the database.")
+            return []
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    id, detection_timestamp, job_id, id_cia, id_report, name, 
+                    last_successful_exec, refresh_time
+                FROM STALE_JOBS_LOG
+                ORDER BY detection_timestamp DESC
+                LIMIT 500
+            """,)
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+        except sqlite3.Error as e:
+            logger.error(f"Error retrieving stale job logs: {e}")
+            return []
         finally:
             conn.close()

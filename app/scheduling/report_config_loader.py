@@ -43,19 +43,19 @@ class ReportConfigLoader:
         Fetches the configuration for a single report from the Oracle database.
         """
         report = None
-        # Assuming the stored procedure can be called with an id_report to filter.
-        sql_query = f"SELECT id_cia, company, id_report, name, query, swapi, refreshtime FROM pack_exceldinamico.sp_buscar_api({id_report}) WHERE id_cia = {id_cia}"
+        # The procedure likely takes id_cia. The query is parameterized to prevent SQL injection.
+        sql_query = "SELECT id_cia, company, id_report, name, query, swapi, refreshtime FROM pack_exceldinamico.sp_buscar_api(:id_cia) WHERE id_report = :id_report"
         
         try:
             with OracleTransaction() as connection:
                 cursor = connection.cursor()
-                cursor.execute(sql_query)
+                cursor.execute(sql_query, {'id_cia': id_cia, 'id_report': id_report})
                 row = cursor.fetchone()
                 if row:
                     columns = [col[0] for col in cursor.description]
                     report_data = dict(zip(columns, row))
                     report = Report(**report_data)
-                    logger.info(f"Successfully fetched configuration for report ID: {id_report}")
+                    logger.info(f"Successfully fetched configuration for report ID: {id_report} for company ID: {id_cia}")
         except Exception as e:
             logger.error(f"Error fetching single report config for ID {id_report}: {e}")
             

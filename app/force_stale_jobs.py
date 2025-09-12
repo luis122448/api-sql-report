@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from services.metadata_service import MetadataService
-from scheduling.scheduler import run_scheduled_extraction
+from app.scheduling.tasks import run_scheduled_extraction
 from configs.oracle import DB_ORACLE_POOL_MAX
 
 # Configure logging for the script
@@ -56,7 +56,8 @@ def force_reprocess_stale_jobs():
                     report.name,
                     report.query,
                     report.company,
-                    report.refreshtime
+                    report.refreshtime,
+                    execution_type='FORCE'
                 ): report for report in stale_reports
             }
             

@@ -28,3 +28,8 @@ async def get_reports_status(report_config_manager: ReportConfigManager = Depend
 async def get_executions_by_report(id_cia: int, id_report: int, metadata_service: MetadataService = Depends()):
     executions = metadata_service.get_executions_by_report(id_cia, id_report)
     return ApiResponseList(status=1, message="OK", list=executions)
+
+@router.get("/dashboard/stale_jobs_log", response_model=ApiResponseList)
+async def get_stale_jobs_log(metadata_service: MetadataService = Depends()):
+    stale_logs = metadata_service.get_stale_job_logs()
+    return ApiResponseList(status=1, message="OK", list=stale_logs)

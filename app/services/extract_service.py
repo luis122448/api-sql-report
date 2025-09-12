@@ -22,7 +22,7 @@ class ExtractService:
         self.oracle_connection = oracle.connection
         self.oracle_cursor = oracle.connection.cursor()
 
-    def run_extraction_pipeline(self, id_cia: int, id_report: int, name: str, query: str, company: str = None, format: str = 'parquet') -> ApiResponseObject:
+    def run_extraction_pipeline(self, id_cia: int, id_report: int, name: str, query: str, company: str = None, format: str = 'parquet', execution_type: str = 'AUTO') -> ApiResponseObject:
         start_pipeline_time = datetime.now()
         pipeline_status = 'OK'
         pipeline_error_message = None
@@ -100,7 +100,8 @@ class ExtractService:
                 last_exec=last_exec if last_exec else datetime.now(), # Log current time if no DB time obtained
                 processing_time_ms=processing_time_ms,
                 status=pipeline_status,
-                error_message=pipeline_error_message
+                error_message=pipeline_error_message,
+                execution_type=execution_type
             )
             
             if pipeline_status == 'OK':

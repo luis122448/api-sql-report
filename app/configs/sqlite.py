@@ -38,6 +38,7 @@ def init_db():
                 processing_time_ms INTEGER,
                 status TEXT NOT NULL DEFAULT 'OK',
                 error_message TEXT,
+                execution_type TEXT DEFAULT 'AUTO',
                 PRIMARY KEY (id_cia, id_report, last_exec)
             )
         """)
