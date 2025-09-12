@@ -457,6 +457,7 @@ class MetadataService:
 
                 is_stale = False
                 last_start_time = None
+                staleness_duration = None
 
                 if last_start_row:
                     last_start_time_str = last_start_row['timestamp']
@@ -465,6 +466,7 @@ class MetadataService:
                     
                     if (now - last_start_time) > staleness_threshold:
                         is_stale = True
+                        staleness_duration = now - last_start_time
                         logger.warning(f"GUARDIAN: Stale job detected! Job ID: {job_id}, Name: {job['name']}. Last start: {last_start_time_str}. Threshold: {staleness_threshold}.")
                 else:
                     # If the job has never started, check against its schedule date
@@ -474,6 +476,7 @@ class MetadataService:
                         schedule_date = datetime.fromisoformat(schedule_date_row['schedule_date']).astimezone(peru_tz)
                         if (now - schedule_date) > staleness_threshold:
                             is_stale = True
+                            staleness_duration = now - schedule_date
                             logger.warning(f"GUARDIAN: Stale job detected! Job ID: {job_id}, Name: {job['name']}. Job has never run. Scheduled at: {schedule_date}. Threshold: {staleness_threshold}.")
 
                 if is_stale:
@@ -486,6 +489,7 @@ class MetadataService:
                     if found_report:
                         # Attach the last start time to the object for logging purposes
                         found_report.last_successful_exec = last_start_time
+                        found_report.staleness_duration_minutes = int(staleness_duration.total_seconds() / 60)
                         stale_reports.append(found_report)
                     else:
                         logger.error(f"GUARDIAN: Could not find full report configuration for stale job ID {job_id}. It may have been removed from Oracle.")
@@ -519,9 +523,9 @@ class MetadataService:
                 cursor.execute("""
                     INSERT INTO STALE_JOBS_LOG (
                         detection_timestamp, job_id, id_cia, id_report, name, 
-                        last_successful_exec, refresh_time
+                        last_successful_exec, refresh_time, staleness_duration_minutes
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     now,
                     job_id,
@@ -529,7 +533,8 @@ class MetadataService:
                     report.id_report,
                     report.name,
                     report.last_successful_exec,
-                    report.refreshtime
+                    report.refreshtime,
+                    report.staleness_duration_minutes
                 ))
             
             conn.commit()
@@ -561,5 +566,25 @@ class MetadataService:
         except sqlite3.Error as e:
             logger.error(f"Error retrieving stale job logs: {e}")
             return []
+        finally:
+            conn.close()
+
+    def log_guardian_event(self, event_type: str, message: str = None, duration_ms: int = None):
+        """Logs an event related to the guardian process itself."""
+        conn = get_db_connection()
+        if not conn:
+            logger.error("GUARDIAN: Failed to connect to the database to log guardian event.")
+            return
+        try:
+            peru_tz = pytz.timezone('America/Lima')
+            now_in_peru = datetime.now(peru_tz)
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO GUARDIAN_LOG (timestamp, event_type, message, duration_ms)
+                VALUES (?, ?, ?, ?)
+            """, (now_in_peru, event_type, message, duration_ms))
+            conn.commit()
+        except sqlite3.Error as e:
+            logger.error(f"GUARDIAN: Error logging guardian event: {e}")
         finally:
             conn.close()

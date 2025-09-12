@@ -3,6 +3,7 @@ import logging
 import sys
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 
 # Add the project root to the Python path to allow imports from other modules.
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -21,11 +22,12 @@ def force_reprocess_stale_jobs():
     run in twice its configured refresh time. This function is designed to be
     resilient and provide a safety net for the main scheduler.
     """
+    start_time = datetime.now()
+    metadata_service = MetadataService()
     logger.info("GUARDIAN: Starting check for stale jobs...")
+    metadata_service.log_guardian_event('guardian_start', 'Guardian check started.')
     
     try:
-        metadata_service = MetadataService()
-        
         # 1. Identify stale reports
         stale_reports = metadata_service.get_stale_reports()
         
@@ -74,6 +76,12 @@ def force_reprocess_stale_jobs():
     except Exception as e:
         # This is a top-level catch to ensure the guardian itself never crashes the scheduler
         logger.critical(f"GUARDIAN: An unexpected critical error occurred in the stale job guardian. Error: {e}", exc_info=True)
+        metadata_service.log_guardian_event('guardian_error', f'An unexpected critical error occurred: {e}')
+    finally:
+        end_time = datetime.now()
+        duration_ms = int((end_time - start_time).total_seconds() * 1000)
+        logger.info(f"GUARDIAN: Guardian check finished in {duration_ms}ms.")
+        metadata_service.log_guardian_event('guardian_end', 'Guardian check finished.', duration_ms=duration_ms)
 
 if __name__ == "__main__":
     # This allows the script to be run manually for testing or emergency reprocessing.

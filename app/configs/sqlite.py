@@ -120,7 +120,8 @@ def init_db():
                 id_report INTEGER,
                 name TEXT,
                 last_successful_exec TIMESTAMP,
-                refresh_time INTEGER
+                refresh_time INTEGER,
+                staleness_duration_minutes INTEGER
             )
         """)
         cursor.execute("""
@@ -128,6 +129,20 @@ def init_db():
         """)
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_stale_detection_timestamp ON STALE_JOBS_LOG (detection_timestamp)
+        """)
+
+        # Create GUARDIAN_LOG table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS GUARDIAN_LOG (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TIMESTAMP NOT NULL,
+                event_type TEXT NOT NULL,
+                message TEXT,
+                duration_ms INTEGER
+            )
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_guardian_timestamp ON GUARDIAN_LOG (timestamp)
         """)
 
         conn.commit()
