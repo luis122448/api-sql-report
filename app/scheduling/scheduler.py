@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
-from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR, EVENT_JOB_MISSED
+from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR, EVENT_JOB_MISSED, EVENT_JOB_MODIFIED
 from configs.oracle import OracleTransaction, DB_ORACLE_POOL_MAX
 from services.extract_service import ExtractService
 from services.minio_service import MinioService
@@ -30,15 +30,72 @@ minio_service = MinioService(minio_config=minio_config_instance)
 
 
 def job_listener(event):
-    """Listens to scheduler events and logs them."""
+    """Listens to scheduler events and logs them to both logger and database."""
+    event_type_mapping = {
+        EVENT_JOB_EXECUTED: 'job_executed',
+        EVENT_JOB_ERROR: 'job_failed',
+        EVENT_JOB_MISSED: 'job_missed',
+        EVENT_JOB_MODIFIED: 'job_modified',
+    }
+    event_type = event_type_mapping.get(event.code)
+    if not event_type:
+        logger.info(f"SCHEDULER_EVENT: Job {event.job_id} received unhandled event code: {event.code}")
+        return
+
+    log_message = f"SCHEDULER_EVENT: Job {event.job_id} {event_type}."
     if event.exception:
-        logger.error(f"SCHEDULER_EVENT: Job {event.job_id} crashed: {event.exception}", exc_info=True)
-    elif event.code == EVENT_JOB_MISSED:
-        logger.warning(f"SCHEDULER_EVENT: Job {event.job_id} was missed.")
-    elif event.code == EVENT_JOB_EXECUTED:
-        logger.info(f"SCHEDULER_EVENT: Job {event.job_id} executed successfully.")
+        logger.error(f"{log_message} Exception: {event.exception}", exc_info=True)
+    elif event_type == 'job_missed':
+        logger.warning(log_message)
     else:
-        logger.info(f"SCHEDULER_EVENT: Job {event.job_id} event: {event.code}")
+        logger.info(log_message)
+
+    if not event.job_id.startswith("report_"):
+        return
+
+    try:
+        metadata_service = MetadataService()
+        job = scheduler.get_job(event.job_id)
+        if not job:
+            metadata_service.log_scheduler_event(job_id=event.job_id, event_type=event_type, message="Job details not found after event.")
+            return
+
+        parts = event.job_id.split('_')
+        id_cia = int(parts[1]) if len(parts) > 1 else None
+        id_report = int(parts[2]) if len(parts) > 2 else None
+
+        job_args = job.args
+        name = job_args[2] if len(job_args) > 2 else None
+        company = job_args[4] if len(job_args) > 4 else None
+        refresh_time = job_args[5] if len(job_args) > 5 else None
+
+        schedule_type = ""
+        if refresh_time:
+            if refresh_time > 999:
+                schedule_type = "Daily"
+            elif refresh_time >= 60:
+                schedule_type = "Hourly"
+            else:
+                schedule_type = "High-Frequency"
+
+        message = f"Job {event_type}."
+        if event.exception:
+            message = f"Job failed: {str(event.exception)[:1000]}"
+
+        metadata_service.log_scheduler_event(
+            job_id=event.job_id,
+            id_cia=id_cia,
+            id_report=id_report,
+            name=name,
+            company=company,
+            event_type=event_type,
+            message=message,
+            next_run_time=job.next_run_time,
+            refresh_time=refresh_time,
+            schedule_type=schedule_type
+        )
+    except Exception as e:
+        logger.error(f"Failed to log scheduler event to database for job {event.job_id}: {e}", exc_info=True)
 
 
 def _clean_old_scheduler_logs_job():
@@ -91,15 +148,7 @@ def update_scheduled_jobs():
         else:
             schedule_type = "High-Frequency"
 
-        if job_id in current_job_ids:
-            scheduler.remove_job(job_id)
-            metadata_service.log_scheduler_event(
-                job_id=job_id, id_cia=report.id_cia, id_report=report.id_report,
-                name=report.name, company=report.company, event_type='job_updated',
-                message=f"Job {job_id} updated due to configuration change.",
-                refresh_time=report.refreshtime, schedule_type=schedule_type
-            )
-            logger.info(f"Removed existing job {job_id} for update.")
+        
 
         trigger_args = {
             'args': [report.id_cia, report.id_report, report.name, report.query, report.company, report.refreshtime],
@@ -147,7 +196,7 @@ def start_scheduler():
     peru_tz = pytz.timezone('America/Lima')
 
     # Add event listener
-    scheduler.add_listener(job_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR | EVENT_JOB_MISSED)
+    scheduler.add_listener(job_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR | EVENT_JOB_MISSED | EVENT_JOB_MODIFIED)
     logger.info("Added scheduler event listener.")
 
     # Use a local instance of MetadataService for thread safety.
