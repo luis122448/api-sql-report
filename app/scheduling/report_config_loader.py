@@ -1,6 +1,8 @@
 import logging
 from configs.oracle import OracleTransaction
 from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -13,6 +15,8 @@ class Report(BaseModel):
     query: str = Field(alias="QUERY")
     swapi: str = Field(alias="SWAPI")
     refreshtime: int = Field(alias="REFRESHTIME")
+    last_successful_exec: Optional[datetime] = None
+    staleness_duration_minutes: Optional[int] = None
 
 class ReportConfigLoader:
     # Handles loading report configurations from the Oracle database.
