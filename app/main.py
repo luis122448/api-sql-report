@@ -37,9 +37,8 @@ app.include_router(usage_router.router, prefix="/api")
 
 
 @app.on_event("startup")
-async def startup_event():
-    thread = threading.Thread(target=start_scheduler)
-    thread.start()
+def startup_event():
+    start_scheduler()
 
 @app.on_event("shutdown")
 async def shutdown_event():
