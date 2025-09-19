@@ -1,6 +1,6 @@
 services:
   app:
-    container_name: data-ingestor-python
+    container_name: api-sql-report
     env_file:
       - ./.env
     build: 

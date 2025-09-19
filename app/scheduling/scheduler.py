@@ -247,12 +247,12 @@ def start_scheduler():
     # Add the guardian job to check for and reprocess stale jobs
     scheduler.add_job(
         force_reprocess_stale_jobs,
-        IntervalTrigger(minutes=30, timezone=peru_tz),
+        IntervalTrigger(minutes=25, timezone=peru_tz),
         id='guardian_stale_job_check',
         name='Guardian: Check for Stale Jobs',
         replace_existing=True
     )
-    logger.info("Scheduled guardian job to check for stale reports every 30 minutes.")
+    logger.info("Scheduled guardian job to check for stale reports every 25 minutes.")
 
     update_scheduled_jobs()
 
