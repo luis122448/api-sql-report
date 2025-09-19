@@ -208,7 +208,7 @@ def start_scheduler():
     reports_to_run = metadata_service.cleanup_and_get_reports_to_reprocess(urgent_only=True)
 
     with ThreadPoolExecutor(max_workers=DB_ORACLE_POOL_MAX) as executor:
-        futures = [executor.submit(run_scheduled_extraction, r.id_cia, r.id_report, r.name, r.query, r.company, r.refreshtime) for r in reports_to_run]
+        futures = [executor.submit(run_scheduled_extraction, r.id_cia, r.id_report, r.name, r.query, r.company, r.refreshtime, execution_type='INIT') for r in reports_to_run]
         for future in futures:
             try:
                 future.result()
