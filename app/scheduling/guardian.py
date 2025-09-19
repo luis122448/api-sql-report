@@ -6,10 +6,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
 # Add the project root to the Python path to allow imports from other modules.
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from services.metadata_service import MetadataService
-from app.scheduling.tasks import run_scheduled_extraction
+from scheduling.tasks import run_scheduled_extraction
 from configs.oracle import DB_ORACLE_POOL_MAX
 
 # Configure logging for the script

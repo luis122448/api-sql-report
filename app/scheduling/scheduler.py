@@ -15,7 +15,7 @@ from services.metadata_service import MetadataService
 from scheduling.report_config_loader import ReportConfigLoader
 from core.config_manager import ReportConfigManager
 from configs.minio import MinioConfig
-from force_stale_jobs import force_reprocess_stale_jobs
+from scheduling.guardian import force_reprocess_stale_jobs
 from scheduling.tasks import run_scheduled_extraction
 
 logging.basicConfig(level=logging.DEBUG)
