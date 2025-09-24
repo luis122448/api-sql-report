@@ -1,6 +1,7 @@
 
 import logging
 import pytz
+from core.settings import APP_TIMEZONE
 import re
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
@@ -113,7 +114,7 @@ def update_scheduled_jobs():
     # Use a local instance of MetadataService for thread safety.
     metadata_service = MetadataService()
     current_reports = ReportConfigLoader.get_reports_from_oracle()
-    peru_tz = pytz.timezone('America/Lima')
+    peru_tz = APP_TIMEZONE
 
     # Create Minio buckets for each company based on id_cia
     id_cias = {report.id_cia for report in current_reports if report.id_cia}
@@ -193,7 +194,7 @@ def update_scheduled_jobs():
 def start_scheduler():
     """Initializes and starts the APScheduler."""
     logger.info("Starting report scheduler...")
-    peru_tz = pytz.timezone('America/Lima')
+    peru_tz = APP_TIMEZONE
 
     # Add event listener
     scheduler.add_listener(job_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR | EVENT_JOB_MISSED | EVENT_JOB_MODIFIED)

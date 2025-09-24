@@ -3,6 +3,7 @@ import logging
 import oracledb
 from dotenv import load_dotenv
 from utils.path import BASEDIR
+from core.settings import ORACLE_TIMEZONE_OFFSET
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,7 +23,7 @@ pool = None
 def set_session_timezone(connection, tag):
     # tag is not used in this case, but is required by the callback signature
     cursor = connection.cursor()
-    cursor.execute("ALTER SESSION SET TIME_ZONE = '-05:00'")
+    cursor.execute(f"ALTER SESSION SET TIME_ZONE = '{ORACLE_TIMEZONE_OFFSET}'")
     cursor.close()
 
 def init_oracle_pool():

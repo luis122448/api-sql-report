@@ -2,6 +2,7 @@ import sqlite3
 import pytz
 import logging
 from datetime import datetime, timedelta
+from core.settings import APP_TIMEZONE
 from configs.sqlite import get_db_connection
 from schemas.api_response_schema import ApiResponseObject
 from scheduling.report_config_loader import ReportConfigLoader # Import the loader
@@ -24,13 +25,12 @@ class MetadataService:
             response.log_message = "Failed to connect to the database."
             return response
         try:
-            peru_tz = pytz.timezone('America/Lima')
-            now_in_peru = datetime.now(peru_tz)
+            now_aware = datetime.now(APP_TIMEZONE)
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO METADATA_REPORT (id_cia, id_report, name, cadsql, object_name_parquet, object_name_csv, last_exec, processing_time_ms, status, error_message, execution_type)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (id_cia, id_report, name, cadsql, object_name_parquet, object_name_csv, last_exec or now_in_peru, processing_time_ms, status, error_message, execution_type))
+            """, (id_cia, id_report, name, cadsql, object_name_parquet, object_name_csv, last_exec or now_aware, processing_time_ms, status, error_message, execution_type))
             conn.commit()
             response.object = {"id_cia": id_cia, "id_report": id_report}
         except sqlite3.IntegrityError:
@@ -99,14 +99,12 @@ class MetadataService:
                             duration_ms: int = None, status: str = None, company: str = None, 
                             refresh_time: int = None, schedule_type: str = None):
         # Logs events related to scheduled jobs into the SCHEDULED_JOBS_LOG table.
-        # event_type can be 'job_added', 'job_removed', 'job_started', 'job_completed', 'job_failed'.
         conn = get_db_connection()
         if not conn:
             logger.error("Failed to connect to the database.")
             return
         try:
-            peru_tz = pytz.timezone('America/Lima')
-            now_in_peru = datetime.now(peru_tz)
+            now_aware = datetime.now(APP_TIMEZONE)
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO SCHEDULED_JOBS_LOG (
@@ -117,7 +115,7 @@ class MetadataService:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 job_id, id_cia, id_report, name, company, 
-                event_type, now_in_peru, message, next_run_time, duration_ms, status,
+                event_type, now_aware, message, next_run_time, duration_ms, status,
                 refresh_time, schedule_type
             ))
             conn.commit()
@@ -126,14 +124,11 @@ class MetadataService:
         finally:
             conn.close()
 
-    def get_total_scheduled_reports_metadata(self) -> list[dict[str, Any]]: # Changed List[Dict[str, Any]] to list[dict[str, Any]]
-        # Returns a list of all currently scheduled reports with their configuration details.
-        # This data comes from the Oracle configuration, not the execution log.
+    def get_total_scheduled_reports_metadata(self) -> list[dict[str, Any]]:
         reports = ReportConfigLoader.get_reports_from_oracle()
         return [report.dict() for report in reports]
 
-    def get_weekly_report_execution_details_metadata(self, id_cia: int = -1) -> list[dict[str, Any]]: # Changed List[Dict[str, Any]] to list[dict[str, Any]]
-        # Returns a list of all report executions in the last week with their status and details.
+    def get_weekly_report_execution_details_metadata(self, id_cia: int = -1) -> list[dict[str, Any]]:
         conn = get_db_connection()
         if not conn:
             logger.error("Failed to connect to the database.")
@@ -191,16 +186,14 @@ class MetadataService:
             conn.close()
 
     def clean_old_scheduler_logs(self):
-        # Deletes scheduler logs older than one week.
         conn = get_db_connection()
         if not conn:
             logger.error("Failed to connect to the database.")
             return
         try:
-            peru_tz = pytz.timezone('America/Lima')
-            now_in_peru = datetime.now(peru_tz)
+            now_aware = datetime.now(APP_TIMEZONE)
             cursor = conn.cursor()
-            one_week_ago = now_in_peru - timedelta(weeks=1)
+            one_week_ago = now_aware - timedelta(weeks=1)
             cursor.execute("DELETE FROM SCHEDULED_JOBS_LOG WHERE timestamp < ?", (one_week_ago,))
             conn.commit()
             logger.info(f"Cleaned old scheduler logs. Deleted {cursor.rowcount} entries.")
@@ -210,46 +203,32 @@ class MetadataService:
             conn.close()
 
     def cleanup_and_get_reports_to_reprocess(self, urgent_only=False):
-        # Cleans up failed reports and identifies reports that need to be reprocessed.
         conn = get_db_connection()
         if not conn:
             logger.error("Failed to connect to the database.")
             return []
         try:
-            peru_tz = pytz.timezone('America/Lima')
             cursor = conn.cursor()
-
-            # 1. Delete failed reports
             cursor.execute("DELETE FROM METADATA_REPORT WHERE status = 'FAILED'")
             conn.commit()
             logger.info(f"Deleted {cursor.rowcount} failed reports from METADATA_REPORT.")
 
-            # 2. Get all configured reports from Oracle
             all_reports = ReportConfigLoader.get_reports_from_oracle()
             reports_to_reprocess = []
-
-            # Filter for urgent reports if requested
             reports_to_check = [r for r in all_reports if r.refreshtime <= 30] if urgent_only else all_reports
 
             for report in reports_to_check:
-                # 3. Check for the latest successful execution of the report
                 latest_successful_exec = self.get_latest_report_metadata(report.id_cia, report.id_report)
 
                 if not latest_successful_exec:
-                    # Reprocess if no successful execution exists
                     reports_to_reprocess.append(report)
                     logger.info(f"Report {report.name} marked for reprocessing (no successful execution found).")
                 else:
-                    # Reprocess if the report is outdated
                     last_exec_str = latest_successful_exec['last_exec']
-                    # Convert string to datetime object
-                    last_exec_time = datetime.fromisoformat(last_exec_str)
-                    
-                    # Ensure last_exec_time is offset-aware for comparison
-                    if last_exec_time.tzinfo is None:
-                        last_exec_time = last_exec_time.astimezone()
+                    last_exec_naive = datetime.fromisoformat(last_exec_str)
+                    last_exec_time = APP_TIMEZONE.localize(last_exec_naive) if last_exec_naive.tzinfo is None else last_exec_naive
 
-                    now_aware = datetime.now(peru_tz)
+                    now_aware = datetime.now(APP_TIMEZONE)
                     if now_aware - last_exec_time > timedelta(minutes=report.refreshtime):
                         reports_to_reprocess.append(report)
                         logger.info(f"Report {report.name} marked for reprocessing (outdated).")
@@ -263,36 +242,26 @@ class MetadataService:
             conn.close()
 
     def get_deprecated_reports(self):
-        # Identifies reports that need to be reprocessed without cleaning up existing data.
         conn = get_db_connection()
         if not conn:
             logger.error("Failed to connect to the database.")
             return []
         try:
-            peru_tz = pytz.timezone('America/Lima')
-            # 1. Get all configured reports from Oracle
             all_reports = ReportConfigLoader.get_reports_from_oracle()
             reports_to_reprocess = []
 
             for report in all_reports:
-                # 2. Check for the latest successful execution of the report
                 latest_successful_exec = self.get_latest_report_metadata(report.id_cia, report.id_report)
 
                 if not latest_successful_exec:
-                    # Reprocess if no successful execution exists
                     reports_to_reprocess.append(report)
                     logger.info(f"Report {report.name} marked for reprocessing (no successful execution found).")
                 else:
-                    # Reprocess if the report is outdated
                     last_exec_str = latest_successful_exec['last_exec']
-                    # Convert string to datetime object
-                    last_exec_time = datetime.fromisoformat(last_exec_str)
-                    
-                    # Ensure last_exec_time is offset-aware for comparison
-                    if last_exec_time.tzinfo is None:
-                        last_exec_time = last_exec_time.astimezone()
+                    last_exec_naive = datetime.fromisoformat(last_exec_str)
+                    last_exec_time = APP_TIMEZONE.localize(last_exec_naive) if last_exec_naive.tzinfo is None else last_exec_naive
 
-                    now_aware = datetime.now(peru_tz)
+                    now_aware = datetime.now(APP_TIMEZONE)
                     if now_aware - last_exec_time > timedelta(minutes=report.refreshtime):
                         reports_to_reprocess.append(report)
                         logger.info(f"Report {report.name} marked for reprocessing (outdated).")
@@ -306,7 +275,6 @@ class MetadataService:
             conn.close()
 
     def clear_scheduler_logs_on_startup(self):
-        # Clears all entries from SCHEDULED_JOBS_LOG table. Used on application startup.
         conn = get_db_connection()
         if not conn:
             logger.error("Failed to connect to the database.")
@@ -322,7 +290,6 @@ class MetadataService:
             conn.close()
 
     def add_scheduled_job(self, job_id, id_cia, id_report, name, company, event_type, refresh_time, schedule_type, schedule_date):
-        # Adds or replaces a new scheduled job to the SCHEDULED_JOBS table.
         try:
             conn = get_db_connection()
             if not conn:
@@ -342,7 +309,6 @@ class MetadataService:
             raise
 
     def get_executions_by_report(self, id_cia, id_report) -> list[dict[str, Any]]:
-        """Returns a list of the last 100 report executions for a given report."""
         conn = get_db_connection()
         if not conn:
             logger.error("Failed to connect to the database.")
@@ -383,7 +349,6 @@ class MetadataService:
 
 
     def get_all_executions(self) -> list[dict[str, Any]]:
-        """Returns a list of all report executions, ordered by last_exec DESC."""
         conn = get_db_connection()
         if not conn:
             logger.error("Failed to connect to the database.")
@@ -406,7 +371,7 @@ class MetadataService:
                     METADATA_REPORT
                 ORDER BY
                     last_exec DESC
-            """)
+            """,)
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
         except sqlite3.Error as e:
@@ -416,11 +381,6 @@ class MetadataService:
             conn.close()
 
     def get_stale_reports(self) -> list[Any]:
-        """
-        Identifies reports that are considered 'stale'. A report is stale if it hasn't
-        had a successful execution in more than twice its configured refresh interval.
-        This version uses METADATA_REPORT for more reliable tracking.
-        """
         logger.info("GUARDIAN: Checking for stale reports using METADATA_REPORT...")
         conn = get_db_connection()
         if not conn:
@@ -428,8 +388,7 @@ class MetadataService:
             return []
         
         try:
-            peru_tz = pytz.timezone('America/Lima')
-            now = datetime.now(peru_tz)
+            now = datetime.now(APP_TIMEZONE)
             stale_reports = []
 
             cursor = conn.cursor()
@@ -451,14 +410,16 @@ class MetadataService:
 
                 if latest_exec_meta:
                     last_exec_time_str = latest_exec_meta['last_exec']
-                    last_successful_exec = datetime.fromisoformat(last_exec_time_str).astimezone(peru_tz)
+                    last_exec_naive = datetime.fromisoformat(last_exec_time_str)
+                    last_successful_exec = APP_TIMEZONE.localize(last_exec_naive) if last_exec_naive.tzinfo is None else last_exec_naive
                     
                     if (now - last_successful_exec) > staleness_threshold:
                         is_stale = True
                         staleness_duration = now - last_successful_exec
                         logger.warning(f"GUARDIAN: Stale job detected! Job ID: {job_id}, Name: {job['name']}. Last successful exec: {last_exec_time_str}. Threshold: {staleness_threshold}.")
                 else:
-                    schedule_date = datetime.fromisoformat(job['schedule_date']).astimezone(peru_tz)
+                    schedule_date_naive = datetime.fromisoformat(job['schedule_date'])
+                    schedule_date = APP_TIMEZONE.localize(schedule_date_naive) if schedule_date_naive.tzinfo is None else schedule_date_naive
                     if (now - schedule_date) > staleness_threshold:
                         is_stale = True
                         staleness_duration = now - schedule_date
@@ -486,9 +447,6 @@ class MetadataService:
             logger.info("GUARDIAN: Finished checking for stale reports.")
 
     def log_stale_job_report(self, stale_reports: list[Any]):
-        """
-        Logs a list of identified stale jobs into the STALE_JOBS_LOG table for auditing.
-        """
         logger.info(f"GUARDIAN: Logging {len(stale_reports)} stale jobs to the database.")
         conn = get_db_connection()
         if not conn:
@@ -496,8 +454,7 @@ class MetadataService:
             return
 
         try:
-            peru_tz = pytz.timezone('America/Lima')
-            now = datetime.now(peru_tz)
+            now = datetime.now(APP_TIMEZONE)
             cursor = conn.cursor()
             
             for report in stale_reports:
@@ -523,12 +480,10 @@ class MetadataService:
             logger.info(f"GUARDIAN: Successfully logged {len(stale_reports)} stale job entries.")
         except sqlite3.Error as e:
             logger.error(f"GUARDIAN: Failed to log stale jobs. Error: {e}", exc_info=True)
-            # We do not re-raise the exception to ensure the guardian process can continue.
         finally:
             conn.close()
 
     def get_stale_job_logs(self) -> list[dict[str, Any]]:
-        """Returns the last 500 entries from the stale jobs log."""
         conn = get_db_connection()
         if not conn:
             logger.error("Failed to connect to the database.")
@@ -552,19 +507,17 @@ class MetadataService:
             conn.close()
 
     def log_guardian_event(self, event_type: str, message: str = None, duration_ms: int = None):
-        """Logs an event related to the guardian process itself."""
         conn = get_db_connection()
         if not conn:
             logger.error("GUARDIAN: Failed to connect to the database to log guardian event.")
             return
         try:
-            peru_tz = pytz.timezone('America/Lima')
-            now_in_peru = datetime.now(peru_tz)
+            now_aware = datetime.now(APP_TIMEZONE)
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO GUARDIAN_LOG (timestamp, event_type, message, duration_ms)
                 VALUES (?, ?, ?, ?)
-            """, (now_in_peru, event_type, message, duration_ms))
+            """, (now_aware, event_type, message, duration_ms))
             conn.commit()
         except sqlite3.Error as e:
             logger.error(f"GUARDIAN: Error logging guardian event: {e}")
