@@ -48,7 +48,7 @@ class ReportConfigLoader:
         """
         report = None
         # The procedure likely takes id_cia. The query is parameterized to prevent SQL injection.
-        sql_query = "SELECT id_cia, company, id_report, name, query, swapi, refreshtime FROM pack_exceldinamico.sp_buscar_api(:id_cia) WHERE id_report = :id_report"
+        sql_query = "SELECT id_cia, company, id_report, name, query, swapi, refreshtime FROM pack_exceldinamico.sp_buscar_api(:id_cia) WHERE id_cia = :id_cia AND id_report = :id_report"
         
         try:
             with OracleTransaction() as connection:
