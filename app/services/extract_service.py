@@ -151,7 +151,7 @@ class ExtractService:
             month_value = "-1"
             decoded_query = decoded_query.replace(":P02MES", f"'{month_value}'")
         if ":P06MES" in decoded_query:
-            month_value = "-1"
+            month_value = datetime.now().strftime('%m')
             decoded_query = decoded_query.replace(":P06MES", f"'{month_value}'")
         if ":P07MES" in decoded_query:
             month_value = "-1"
