@@ -215,7 +215,7 @@ class MetadataService:
 
             all_reports = ReportConfigLoader.get_reports_from_oracle()
             reports_to_reprocess = []
-            reports_to_check = [r for r in all_reports if r.refreshtime <= 30] if urgent_only else all_reports
+            reports_to_check = [r for r in all_reports if r.refreshtime is not None and r.refreshtime <= 30] if urgent_only else all_reports
 
             for report in reports_to_check:
                 latest_successful_exec = self.get_latest_report_metadata(report.id_cia, report.id_report)
@@ -229,7 +229,7 @@ class MetadataService:
                     last_exec_time = APP_TIMEZONE.localize(last_exec_naive) if last_exec_naive.tzinfo is None else last_exec_naive
 
                     now_aware = datetime.now(APP_TIMEZONE)
-                    if now_aware - last_exec_time > timedelta(minutes=report.refreshtime):
+                    if report.refreshtime is not None and now_aware - last_exec_time > timedelta(minutes=report.refreshtime):
                         reports_to_reprocess.append(report)
                         logger.info(f"Report {report.name} marked for reprocessing (outdated).")
 
@@ -262,7 +262,7 @@ class MetadataService:
                     last_exec_time = APP_TIMEZONE.localize(last_exec_naive) if last_exec_naive.tzinfo is None else last_exec_naive
 
                     now_aware = datetime.now(APP_TIMEZONE)
-                    if now_aware - last_exec_time > timedelta(minutes=report.refreshtime):
+                    if report.refreshtime is not None and now_aware - last_exec_time > timedelta(minutes=report.refreshtime):
                         reports_to_reprocess.append(report)
                         logger.info(f"Report {report.name} marked for reprocessing (outdated).")
 
@@ -400,6 +400,8 @@ class MetadataService:
             for job in scheduled_jobs:
                 job_id = job['job_id']
                 refresh_minutes = job['refresh_time']
+                if refresh_minutes is None:
+                    continue
                 staleness_threshold = timedelta(minutes=(refresh_minutes * 2) + 5)
 
                 latest_exec_meta = self.get_latest_report_metadata(job['id_cia'], job['id_report'])
