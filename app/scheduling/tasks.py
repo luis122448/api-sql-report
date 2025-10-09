@@ -2,6 +2,7 @@
 import logging
 import pytz
 from datetime import datetime
+from typing import Optional
 
 from configs.oracle import OracleTransaction
 from services.extract_service import ExtractService
@@ -9,7 +10,7 @@ from services.metadata_service import MetadataService
 
 logger = logging.getLogger(__name__)
 
-def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str, company: str, refreshtime: int, execution_type: str = 'AUTO'):
+def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str, company: str, refreshtime: Optional[int], execution_type: str = 'AUTO'):
     """
     Executes the extraction pipeline for a given report.
     This function is designed to be called by the scheduler or other processes and must be thread-safe.
@@ -23,12 +24,13 @@ def run_scheduled_extraction(id_cia: int, id_report: int, name: str, query: str,
     metadata_service = MetadataService()
 
     schedule_type = ""
-    if refreshtime > 999:
-        schedule_type = "Daily"
-    elif refreshtime >= 60:
-        schedule_type = "Hourly"
-    else:
-        schedule_type = "High-Frequency"
+    if refreshtime is not None:
+        if refreshtime > 999:
+            schedule_type = "Daily"
+        elif refreshtime >= 60:
+            schedule_type = "Hourly"
+        else:
+            schedule_type = "High-Frequency"
 
     metadata_service.log_scheduler_event(
         job_id=job_id,
