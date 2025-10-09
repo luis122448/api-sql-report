@@ -14,7 +14,7 @@ class Report(BaseModel):
     name: str = Field(alias="NAME")
     query: str = Field(alias="QUERY")
     swapi: str = Field(alias="SWAPI")
-    refreshtime: int = Field(alias="REFRESHTIME")
+    refreshtime: Optional[int] = Field(alias="REFRESHTIME", default=None)
     last_successful_exec: Optional[datetime] = None
     staleness_duration_minutes: Optional[int] = None
 
