@@ -162,6 +162,9 @@ class ExtractService:
         if ":P04FECHA_HASTA" in decoded_query:
             end_date_value = datetime.now().strftime('%Y-%m-%d')
             decoded_query = decoded_query.replace(":P04FECHA_HASTA", f"TO_DATE('{end_date_value}', 'YYYY-MM-DD')")
+        if ":P02TIPO_CAMBIO" in decoded_query:
+            exchange_type_value = '-1'
+            decoded_query = decoded_query.replace(":P02TIPO_CAMBIO", f"'{exchange_type_value}'")
 
         # 2. Validate that no placeholders are left undecoded
         remaining_placeholders = re.findall(r'(\{\{.*?\}\}|\:\w+)', decoded_query)
