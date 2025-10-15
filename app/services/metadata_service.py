@@ -209,9 +209,9 @@ class MetadataService:
             return []
         try:
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM METADATA_REPORT WHERE status = 'FAILED'")
-            conn.commit()
-            logger.info(f"Deleted {cursor.rowcount} failed reports from METADATA_REPORT.")
+            # cursor.execute("DELETE FROM METADATA_REPORT WHERE status = 'FAILED'")
+            # conn.commit()
+            # logger.info(f"Deleted {cursor.rowcount} failed reports from METADATA_REPORT.")
 
             all_reports = ReportConfigLoader.get_reports_from_oracle()
             reports_to_reprocess = []
@@ -281,9 +281,9 @@ class MetadataService:
             return
         try:
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM SCHEDULED_JOBS_LOG")
-            conn.commit()
-            logger.info(f"Cleared SCHEDULED_JOBS_LOG table on startup. Deleted {cursor.rowcount} entries.")
+            # cursor.execute("DELETE FROM SCHEDULED_JOBS_LOG")
+            # conn.commit()
+            # logger.info(f"Cleared SCHEDULED_JOBS_LOG table on startup. Deleted {cursor.rowcount} entries.")
         except sqlite3.Error as e:
             logger.error(f"Error clearing scheduler logs on startup: {e}")
         finally:
